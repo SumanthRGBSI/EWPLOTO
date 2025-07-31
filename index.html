@@ -3,452 +3,374 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Polished EHS Control of Work System</title>
+    <title>EHS Work Permit Details</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary-color: #4f46e5; /* Indigo 600 */
-            --primary-hover-color: #4338ca; /* Indigo 700 */
-            --danger-color: #dc2626; /* Red 600 */
+            --c-primary: #0284c7; /* sky-600 */
+            --c-primary-light: #f0f9ff; /* sky-50 */
+            --c-success: #10b981; /* emerald-500 */
+            --c-danger: #ef4444; /* red-500 */
+            --c-warning: #f59e0b; /* amber-500 */
         }
-        html { scroll-behavior: smooth; }
         body {
             font-family: 'Inter', sans-serif;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
+            background-color: #f1f5f9; /* slate-100 */
         }
-        .page { display: none; }
-        .page.active { display: block; animation: fadeIn 0.5s; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.5s; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        .overlay {
-            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            background-color: rgba(15, 23, 42, 0.8);
-            backdrop-filter: blur(4px);
-            display: flex; align-items: center; justify-content: center;
-            z-index: 50; opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
-        }
-        .overlay.active { opacity: 1; pointer-events: auto; }
-        .overlay-content {
-            background-color: #f8fafc; /* Slate 50 */
-            padding: 0; border-radius: 0.75rem;
-            max-width: 95%; width: 900px; max-height: 90vh; display: flex; flex-direction: column;
-            box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
-            transform: scale(0.95); transition: all 0.3s ease;
-        }
-        .overlay.active .overlay-content { transform: scale(1); }
-        
-        .loto-step { border-left-width: 4px; transition: all 0.3s ease-in-out; }
+        .status-step-complete .step-circle { background-color: var(--c-success); color: white; }
+        .status-step-complete .step-line { background-color: var(--c-success); }
+        .status-step-active .step-circle { background-color: var(--c-primary); color: white; border-color: var(--c-primary); }
+        .status-step-active .step-label { font-weight: 600; color: var(--c-primary); }
+        .status-step-pending .step-circle { background-color: #e2e8f0; border: 2px solid #e2e8f0; color: #64748b; }
+        .status-step-pending .step-line { background-color: #e2e8f0; }
+        .status-step-rejected .step-circle { background-color: var(--c-danger); color: white; }
+        .status-step-rejected .step-label { font-weight: 600; color: var(--c-danger); }
+        .step-circle { transition: all 0.3s ease; }
+
+        .loto-step { border-left-width: 3px; transition: all 0.3s ease-in-out; }
         .loto-step-pending { border-color: #e2e8f0; }
-        .loto-step-active { border-color: var(--primary-color); background-color: #eef2ff; }
-        .loto-step-complete { border-color: #22c55e; }
+        .loto-step-active { border-color: var(--c-primary); background-color: var(--c-primary-light); }
+        .loto-step-complete { border-color: var(--c-success); }
         .loto-step-content { max-height: 0; overflow: hidden; transition: max-height 0.5s ease-in-out, padding 0.5s ease-in-out; }
         
         .btn { transition: all 0.2s ease; }
         .btn:active { transform: scale(0.97); }
-        .nav-item { transition: all 0.2s ease; }
-        .nav-item.active { background-color: var(--primary-color); color: white; }
-        .nav-item:not(.active):hover { background-color: #4338ca20; color: #3730a3; }
-
+        .tab-btn.active { border-color: var(--c-primary); color: var(--c-primary); background-color: var(--c-primary-light); }
     </style>
 </head>
 <body class="text-slate-800">
-    <div id="app-container" class="flex h-screen">
-        <!-- Sidebar Navigation -->
-        <nav class="w-64 bg-white border-r border-slate-200 flex-shrink-0 flex flex-col">
-            <div class="p-4 border-b border-slate-200 flex items-center gap-3">
-                <div class="bg-indigo-600 p-2 rounded-lg">
-                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
-                </div>
-                <div>
-                    <h1 class="text-lg font-bold text-slate-900">EHS CoW</h1>
-                    <p class="text-xs text-slate-500">Control of Work</p>
+    <div id="app-container" class="min-h-screen p-4 sm:p-6 md:p-8">
+        
+        <!-- Header -->
+        <header class="flex justify-between items-center mb-6">
+            <div class="flex items-center gap-4 text-sm">
+                <div class="flex items-center gap-2 text-slate-500">
+                     <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9.293 2.293a1 1 0 011.414 0l7 7A1 1 0 0117 11h-1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-3a1 1 0 00-1-1H9a1 1 0 00-1 1v3a1 1 0 01-1 1H5a1 1 0 01-1-1v-6H3a1 1 0 01-.707-1.707l7-7z" clip-rule="evenodd" /></svg>
+                     <span class="text-slate-300">/</span>
+                     <span>EHS</span>
+                     <span class="text-slate-300">/</span>
+                     <span class="font-semibold text-slate-700">Work Permit Details</span>
                 </div>
             </div>
-            <div id="role-switcher" class="flex-grow p-4 space-y-2">
-                <!-- Role items will be injected here -->
+            <div class="flex items-center gap-3">
+                <select id="permit-selector" class="text-sm rounded-md border-slate-300 shadow-sm focus:ring-sky-500 focus:border-sky-500">
+                    <!-- Options will be injected here -->
+                </select>
+                <button class="p-2 rounded-full hover:bg-slate-200/70 transition-colors">
+                    <svg class="w-5 h-5 text-slate-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.972.246 2.159-.948 2.286-1.56.38-1.56 2.6 0 2.98.972.54 2.159.246 2.286-.948.836-1.372 2.734-2.942 2.106-2.106a1.532 1.532 0 01.948 2.286c.38 1.56 2.6 1.56 2.98 0a1.532 1.532 0 012.286-.948c1.372.836 2.942-.734 2.106-2.106a1.532 1.532 0 01-.948-2.286c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106-2.106a1.532 1.532 0 01.948-2.286zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd" /></svg>
+                </button>
+                 <img src="https://i.pravatar.cc/40?u=s.jones" alt="User Avatar" class="w-9 h-9 rounded-full border-2 border-white shadow-md">
             </div>
-            <div class="p-4 border-t border-slate-200">
-                <div class="flex items-center gap-3">
-                    <img src="https://i.pravatar.cc/40?u=s.jones" alt="User Avatar" class="w-10 h-10 rounded-full">
+        </header>
+
+        <!-- Main Content Card -->
+        <div id="permit-details-card" class="bg-white rounded-xl shadow-lg border border-slate-200/80">
+            <!-- Permit Header -->
+            <div class="p-6 border-b border-slate-200">
+                <div class="flex justify-between items-start gap-4">
                     <div>
-                        <p class="font-semibold text-sm text-slate-800">Sarah Jones</p>
-                        <p class="text-xs text-slate-500">s.jones</p>
+                        <a href="#" class="flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-slate-800 mb-4 transition-colors">
+                            <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+                            Back to Dashboard
+                        </a>
+                        <h1 id="permit-title" class="text-2xl font-bold text-slate-900"></h1>
+                        <p id="permit-subtitle" class="text-slate-500 mt-1"></p>
+                    </div>
+                    <div class="flex items-center gap-3 flex-shrink-0">
+                         <button class="btn bg-white border border-slate-300 text-slate-700 px-4 py-2 rounded-md font-medium hover:bg-slate-100 text-sm flex items-center gap-2">
+                            <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-13a.75.75 0 00-1.5 0v5c0 .414.336.75.75.75h4a.75.75 0 000-1.5h-3.25V5z" clip-rule="evenodd" /></svg>
+                            Status History
+                        </button>
+                        <button class="btn bg-sky-600 text-white px-4 py-2 rounded-md font-medium hover:bg-sky-700 text-sm flex items-center gap-2">
+                            <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M5.5 16a3.5 3.5 0 01-.369-6.98 4 4 0 117.753-1.977A4.5 4.5 0 1113.5 16h-8z" /></svg>
+                            Generate Permit
+                        </button>
                     </div>
                 </div>
             </div>
-        </nav>
 
-        <!-- Main Content Area -->
-        <main class="flex-grow p-6 md:p-8 overflow-y-auto">
-            <div id="supervisor-page" class="page"></div>
-            <div id="worker-page" class="page"></div>
-            <div id="authority-page" class="page"></div>
-            <div id="simops-page" class="page"></div>
-            <div id="ehs-page" class="page"></div>
-        </main>
+            <!-- Status Stepper -->
+            <div id="status-stepper" class="p-6 border-b border-slate-200"></div>
+
+            <!-- Tab Navigation -->
+            <div class="px-6 border-b border-slate-200">
+                <nav id="tab-nav" class="-mb-px flex space-x-6" aria-label="Tabs">
+                    <!-- Tab buttons will be injected here -->
+                </nav>
+            </div>
+
+            <!-- Tab Content Area -->
+            <div class="p-6 md:p-8">
+                <div id="basic-details-tab" class="tab-content"></div>
+                <div id="authorization-tab" class="tab-content"></div>
+                <div id="checklists-tab" class="tab-content"></div>
+                <div id="loto-tab" class="tab-content"></div>
+                <div id="simops-tab" class="tab-content"></div>
+            </div>
+        </div>
+
+        <!-- Modal Overlay -->
+        <div id="modal-overlay" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 opacity-0 pointer-events-none transition-opacity duration-300">
+            <div id="modal-content" class="bg-white rounded-lg shadow-xl p-8 text-center max-w-md w-full transform scale-95 transition-transform duration-300">
+                <!-- Modal content will be injected here -->
+            </div>
+        </div>
     </div>
-
-    <!-- All Overlays -->
-    <div id="checklist-overlay" class="overlay"><div id="checklist-content" class="overlay-content"></div></div>
-    <div id="loto-workflow-overlay" class="overlay"><div id="loto-workflow-content" class="overlay-content"></div></div>
-    <div id="simops-resolution-overlay" class="overlay"><div id="simops-resolution-content" class="overlay-content"></div></div>
-    <div id="modal-overlay" class="overlay"><div id="modal-content" class="overlay-content text-center p-8" style="width: 500px;"></div></div>
 
 <script>
 // --- MOCK DATABASE & STATE ---
 const MOCK_DB = {
     permits: [
-        { id: 1, number: 'PTW-2025-001', desc: 'Weld support bracket on Pipe Rack R-11', loc: 'Area 5 - Processing Unit', status: 'SIMOPS Hold', type: 'Hot Work', simops: { conflictWith: 3, rule: "Hot Work is 'Restricted' near Crane Lift operations." }, loto: { required: false } },
-        { id: 2, number: 'PTW-2025-002', desc: 'Confined Space Entry - Tank T-101', loc: 'Area 2 - Storage Facility', status: 'Pending Approval', type: 'Confined Space', loto: { required: true, points:['Breaker PNL-B-03'], state: 'Required' } },
-        { id: 3, number: 'PTW-2025-003', desc: 'Crane Lift over active walkway', loc: 'Area 5 - Processing Unit', status: 'Active', type: 'Crane Lift', loto: { required: false } },
-        { id: 4, number: 'PTW-2025-004', desc: 'Pump P-502 Motor Replacement', loc: 'Pump House 1', status: 'LOTO In Progress', type: 'Mechanical', loto: { required: true, points:['Breaker PNL-B-03', 'Inlet Valve V-502'], state: 'Applying' } },
-        { id: 5, number: 'PTW-2025-005', desc: 'Electrical Maintenance on Panel P-04', loc: 'Control Room', status: 'Closed', type: 'Electrical', loto: { required: false } }
+        { id: 1, number: 'PTW-2025-001', desc: 'Weld support bracket on Pipe Rack R-11', loc: 'Area 5 - Processing Unit', status: 'SIMOPS Hold', type: 'Hot Work', simops: { conflictWith: 3, rule: "Hot Work is 'Restricted' near Crane Lift operations." }, loto: { required: false }, contractor: 'WeldPro Inc.', coordinator: 'John Doe' },
+        { id: 2, number: 'PTW-2025-002', desc: 'Confined Space Entry - Tank T-101', loc: 'Area 2 - Storage Facility', status: 'Pending Approval', type: 'Confined Space', loto: { required: true, points:['Breaker PNL-B-03'], state: 'Required' }, contractor: 'SafeSpace LLC', coordinator: 'Jane Smith' },
+        { id: 3, number: 'PTW-2025-003', desc: 'Crane Lift over active walkway', loc: 'Area 5 - Processing Unit', status: 'Active', type: 'Crane Lift', loto: { required: false }, contractor: 'HeavyLift Co.', coordinator: 'Mike Ross' },
+        { id: 4, number: 'PTW-2025-004', desc: 'Pump P-502 Motor Replacement', loc: 'Pump House 1', status: 'LOTO In Progress', type: 'Mechanical', loto: { required: true, points:['Breaker PNL-B-03', 'Inlet Valve V-502'], state: 'Applying' }, contractor: 'MechServe', coordinator: 'Sarah Jones' },
+        { id: 5, number: 'PTW-2025-005', desc: 'Electrical Maintenance on Panel P-04', loc: 'Control Room', status: 'Closed', type: 'Electrical', loto: { required: false }, contractor: 'SparkSafe', coordinator: 'David Chen' }
     ],
     lotoPointsData: {
         'Breaker PNL-B-03': { id: 'lp-1', location: 'MCC Room 1', qr: 'QR-PNL-B-03' },
         'Inlet Valve V-502': { id: 'lp-2', location: 'Pump P-502 Skid', qr: 'QR-V-502' }
     },
-    lotoStates: {}
+    lotoStates: {},
+    authorizations: {
+        2: [ { role: 'Requestor', name: 'Mark Johnson', date: '2025-07-30 09:15:22' } ],
+        3: [ { role: 'Requestor', name: 'Chris Lee', date: '2025-07-29 11:45:03' }, { role: 'Area Authority', name: 'Patricia Chen', date: '2025-07-29 14:00:19' }, { role: 'Approver', name: 'Mike Ross', date: '2025-07-29 16:30:00' } ],
+        4: [ { role: 'Requestor', name: 'Sarah Jones', date: '2025-07-31 08:20:11' } ],
+        5: [ { role: 'Requestor', name: 'David Chen', date: '2025-07-28 10:05:00' }, { role: 'Area Authority', name: 'Patricia Chen', date: '2025-07-28 12:10:00' }, { role: 'Approver', name: 'John Doe', date: '2025-07-28 13:00:00' } ]
+    }
 };
 
-const AppState = { currentUserRole: 'supervisor', activePermitId: null };
+const AppState = { activePermitId: 4, activeTab: 'loto' };
 
 // --- DOM GETTERS ---
 const getEl = (id) => document.getElementById(id);
-const Pages = { supervisor: getEl('supervisor-page'), worker: getEl('worker-page'), authority: getEl('authority-page'), simops: getEl('simops-page'), ehs: getEl('ehs-page') };
-const Overlays = { checklist: getEl('checklist-overlay'), loto: getEl('loto-workflow-overlay'), simops: getEl('simops-resolution-overlay'), modal: getEl('modal-overlay') };
-
-// --- ICONS ---
-const Icons = {
-    'Hot Work': `<svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.657 7.343A8 8 0 0118.657 17.657c-1.577 1.577-2.343 3-7.343 3C7 22 5 20 5 18c1 2 2.657 2.657 4.343 1.657z"></path></svg>`,
-    'Confined Space': `<svg class="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v4m0 0h-4m4 0l-5-5"></path></svg>`,
-    'Crane Lift': `<svg class="w-5 h-5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>`,
-    'Mechanical': `<svg class="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>`,
-    'Electrical': `<svg class="w-5 h-5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>`,
-    'Default': `<svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>`
+const TabContents = {
+    'basic-details': getEl('basic-details-tab'),
+    'authorization': getEl('authorization-tab'),
+    'checklists': getEl('checklists-tab'),
+    'loto': getEl('loto-tab'),
+    'simops': getEl('simops-tab')
 };
 
 // --- CORE UI/UX FUNCTIONS ---
-function switchRole(role) {
-    AppState.currentUserRole = role;
-    renderNav();
-    Object.values(Pages).forEach(p => p.classList.remove('active'));
-    Pages[role].classList.add('active');
-    renderPageContent(role);
+function switchTab(tabName) {
+    AppState.activeTab = tabName;
+    renderApp();
 }
 
-function showOverlay(overlayName, permitId) {
-    AppState.activePermitId = permitId;
-    const permit = MOCK_DB.permits.find(p => p.id === permitId);
-    if (!permit) return;
-    
-    let overlay = Overlays[overlayName];
-    let contentEl;
-
-    switch(overlayName) {
-        case 'checklist':
-            contentEl = getEl('checklist-content');
-            const checklistType = permit.status === 'Active' ? 'Post-Work' : 'Pre-Work';
-            contentEl.innerHTML = renderChecklistView(permit, checklistType);
-            setupChecklistUI(permit, checklistType);
-            break;
-        case 'loto':
-            contentEl = getEl('loto-workflow-content');
-            contentEl.innerHTML = renderLotoWorkflowView(permit);
-            setupLotoWorkflowUI(permit);
-            break;
-        case 'simops':
-            contentEl = getEl('simops-resolution-content');
-            contentEl.innerHTML = renderSimopsResolutionView(permit);
-            break;
-    }
-    overlay.classList.add('active');
+function switchPermit(permitId) {
+    AppState.activePermitId = parseInt(permitId, 10);
+    const permit = MOCK_DB.permits.find(p => p.id === AppState.activePermitId);
+    // Sensible default tab based on permit status
+    if (permit.status === 'SIMOPS Hold') AppState.activeTab = 'simops';
+    else if (permit.status === 'LOTO In Progress') AppState.activeTab = 'loto';
+    else if (permit.status === 'Pending Approval') AppState.activeTab = 'checklists';
+    else AppState.activeTab = 'basic-details';
+    renderApp();
 }
 
-function hideAllOverlays() {
-    Object.values(Overlays).forEach(o => o.classList.remove('active'));
-    renderPageContent(AppState.currentUserRole);
-}
-
-function showModal(title, message, actions = [{ text: 'OK', class: 'bg-indigo-600 hover:bg-indigo-700 text-white', action: hideAllOverlays }]) {
-    const contentEl = getEl('modal-content');
-    contentEl.innerHTML = `
-        <h3 class="text-lg font-bold text-slate-900 mb-2">${title}</h3>
-        <div class="text-slate-600 mb-6">${message}</div>
+function showModal(title, message, actions = [{ text: 'OK', class: 'bg-sky-600 hover:bg-sky-700 text-white', action: hideModal }]) {
+    const modalOverlay = getEl('modal-overlay');
+    const modalContent = getEl('modal-content');
+    modalContent.innerHTML = `
+        <h3 class="text-xl font-bold text-slate-900 mb-4">${title}</h3>
+        <div class="text-slate-600 mb-8">${message}</div>
         <div class="flex justify-center gap-4">
-            ${actions.map(act => `<button class="btn ${act.class} px-4 py-2 rounded-md font-semibold text-sm">${act.text}</button>`).join('')}
+            ${actions.map(act => `<button class="btn ${act.class} px-5 py-2.5 rounded-lg font-semibold text-sm">${act.text}</button>`).join('')}
         </div>
     `;
     actions.forEach((act, index) => {
-        contentEl.querySelectorAll('button')[index].onclick = act.action;
+        modalContent.querySelectorAll('button')[index].onclick = act.action;
     });
-    Overlays.modal.classList.add('active');
+    modalOverlay.classList.remove('opacity-0', 'pointer-events-none');
+    modalContent.classList.remove('scale-95');
 }
 
-// --- PAGE & VIEW RENDERING ---
-function renderNav() {
-    const roles = [
-        { id: 'supervisor', name: 'Supervisor', icon: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>` },
-        { id: 'worker', name: 'Worker', icon: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"></path></svg>` },
-        { id: 'authority', name: 'Area Authority', icon: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>` },
-        { id: 'simops', name: 'SIMOPS', icon: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>` },
-        { id: 'ehs', name: 'EHS Officer', icon: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>` },
+function hideModal() {
+    const modalOverlay = getEl('modal-overlay');
+    const modalContent = getEl('modal-content');
+    modalOverlay.classList.add('opacity-0', 'pointer-events-none');
+    modalContent.classList.add('scale-95');
+    renderApp();
+}
+
+// --- RENDERING FUNCTIONS ---
+function renderApp() {
+    const permit = MOCK_DB.permits.find(p => p.id === AppState.activePermitId);
+    if (!permit) return;
+
+    getEl('permit-title').textContent = `${permit.number}: ${permit.type}`;
+    getEl('permit-subtitle').textContent = permit.desc;
+    
+    renderStatusStepper(permit);
+    renderTabs(permit);
+    renderTabContent(permit);
+}
+
+function renderStatusStepper(permit) {
+    const container = getEl('status-stepper');
+    const statuses = ['Draft', 'Requested', 'Approved', 'Active', 'Closed'];
+    const permitStatus = permit.status.split(' ')[0];
+    let currentStatusIndex = statuses.indexOf(permitStatus);
+    let isRejected = false;
+
+    if (permit.status === 'SIMOPS Hold') {
+        statuses.splice(2, 0, 'SIMOPS Hold');
+        currentStatusIndex = 2;
+        isRejected = true;
+    } else if (permit.status === 'LOTO In Progress' || permit.status === 'Pending Approval') {
+        currentStatusIndex = 1;
+    } else if (permit.status === 'Closed') {
+        currentStatusIndex = statuses.length -1;
+    }
+
+    container.innerHTML = `
+        <div class="flex items-center">
+            ${statuses.map((status, index) => {
+                let stateClass = 'status-step-pending';
+                if (index < currentStatusIndex) stateClass = 'status-step-complete';
+                else if (index === currentStatusIndex) {
+                    stateClass = isRejected ? 'status-step-rejected' : 'status-step-active';
+                }
+
+                return `
+                <div class="status-step flex-1 flex items-center ${stateClass}">
+                    <div class="step-circle w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0 border-2">
+                        ${index < currentStatusIndex ? `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>` : index + 1}
+                    </div>
+                    <span class="step-label text-sm ml-3 whitespace-nowrap">${status}</span>
+                    ${index < statuses.length - 1 ? '<div class="step-line h-0.5 flex-1 mx-4"></div>' : ''}
+                </div>
+                `;
+            }).join('')}
+        </div>
+    `;
+}
+
+function renderTabs(permit) {
+    const nav = getEl('tab-nav');
+    const availableTabs = ['basic-details', 'authorization', 'checklists'];
+    if (permit.loto.required) availableTabs.push('loto');
+    if (permit.simops) availableTabs.push('simops');
+
+    nav.innerHTML = availableTabs.map(tabId => {
+        const name = tabId.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase());
+        return `<a href="#" onclick="event.preventDefault(); switchTab('${tabId}')" class="tab-btn whitespace-nowrap py-3 px-2 rounded-t-lg border-b-2 font-semibold text-sm ${AppState.activeTab === tabId ? 'active' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'}">${name}</a>`;
+    }).join('');
+}
+
+function renderTabContent(permit) {
+    Object.values(TabContents).forEach(el => el.classList.remove('active'));
+    const activeContentEl = TabContents[AppState.activeTab];
+    if (!activeContentEl) return;
+
+    switch(AppState.activeTab) {
+        case 'basic-details': activeContentEl.innerHTML = renderBasicDetailsContent(permit); break;
+        case 'authorization': activeContentEl.innerHTML = renderAuthorizationContent(permit); break;
+        case 'checklists': activeContentEl.innerHTML = renderChecklistsContent(permit); setupChecklistUI(permit); break;
+        case 'loto': activeContentEl.innerHTML = renderLotoContent(permit); setupLotoWorkflowUI(permit); break;
+        case 'simops': activeContentEl.innerHTML = renderSimopsContent(permit); break;
+    }
+    activeContentEl.classList.add('active');
+}
+
+function renderBasicDetailsContent(permit) {
+    const details = [
+        { label: 'Permit Name', value: permit.desc },
+        { label: 'EWP ID', value: permit.number },
+        { label: 'Start of Permit', value: '31 Jul 2025' },
+        { label: 'Expiry of Permit', value: '07 Aug 2025' },
+        { label: 'Permit Start Hours', value: '10:57:17' },
+        { label: 'Permit End Hours', value: '10:57:17' },
+        { label: 'Location', value: permit.loc },
+        { label: 'Contractor', value: permit.contractor },
+        { label: 'Plant', value: 'Plant B' },
+        { label: 'Permit Co-ordinator', value: permit.coordinator },
+        { label: 'Permit Type', value: permit.type },
+        { label: 'Description', value: '-' }
     ];
-    getEl('role-switcher').innerHTML = roles.map(role => `
-        <a href="#" onclick="switchRole('${role.id}')" class="nav-item flex items-center gap-3 p-3 rounded-lg font-semibold text-sm text-slate-700 ${AppState.currentUserRole === role.id ? 'active' : ''}">
-            ${role.icon}
-            <span>${role.name}</span>
-        </a>
-    `).join('');
-}
 
-function renderPageContent(role) {
-    const container = Pages[role];
-    switch (role) {
-        case 'supervisor': container.innerHTML = renderSupervisorDashboard(); break;
-        case 'worker': container.innerHTML = renderWorkerDashboard(); break;
-        case 'simops': container.innerHTML = renderSimopsDashboard(); break;
-        default: container.innerHTML = `<div class="bg-white p-6 rounded-lg shadow-sm"><h2 class="text-2xl font-bold">${role.charAt(0).toUpperCase() + role.slice(1)} Dashboard</h2><p class="text-slate-500 mt-4">This view is under construction.</p></div>`;
-    }
-}
-
-function getStatusClass(status) {
-    const classes = {
-        'Active': 'bg-green-100 text-green-800', 'Pending Approval': 'bg-yellow-100 text-yellow-800',
-        'SIMOPS Hold': 'bg-red-100 text-red-800', 'LOTO In Progress': 'bg-indigo-100 text-indigo-800',
-        'Closed': 'bg-slate-200 text-slate-700'
-    };
-    return classes[status] || 'bg-slate-100 text-slate-800';
-}
-
-function renderSupervisorDashboard() {
-    const actionRequired = MOCK_DB.permits.filter(p => ['Pending Approval', 'SIMOPS Hold'].includes(p.status));
-    const inProgress = MOCK_DB.permits.filter(p => ['LOTO In Progress', 'Active'].includes(p.status));
-    const recentlyClosed = MOCK_DB.permits.filter(p => p.status === 'Closed');
-
-    const renderPermitRow = (p) => {
-        let actionText = 'View Details';
-        let actionClass = 'text-indigo-600 hover:text-indigo-800';
-        let overlay = 'checklist';
-
-        switch(p.status) {
-            case 'Pending Approval': actionText = 'Review Permit'; overlay = 'checklist'; break;
-            case 'SIMOPS Hold': actionText = 'Resolve Conflict'; overlay = 'simops'; actionClass = 'text-red-600 hover:text-red-800 font-bold'; break;
-            case 'LOTO In Progress': actionText = 'Monitor LOTO'; overlay = 'loto'; actionClass = 'text-indigo-600 hover:text-indigo-800'; break;
-            case 'Active': actionText = 'View Live Permit'; overlay = 'checklist'; break;
-            case 'Closed': actionText = 'View Audit'; overlay = 'checklist'; break;
-        }
-
-        return `
-            <tr class="hover:bg-slate-50 transition-colors">
-                <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="flex items-center">
-                        <div class="flex-shrink-0 h-10 w-10 flex items-center justify-center bg-slate-100 rounded-lg">
-                            ${Icons[p.type] || Icons['Default']}
-                        </div>
-                        <div class="ml-4">
-                            <div class="font-medium text-slate-900">${p.number || `PTW-2025-00${p.id}`}</div>
-                            <div class="text-sm text-slate-500">${p.desc}</div>
-                        </div>
-                    </div>
-                </td>
-                <td class="px-6 py-4 text-sm text-slate-600">${p.loc}</td>
-                <td class="px-6 py-4"><span class="px-2 py-1 text-xs font-semibold rounded-full ${getStatusClass(p.status)}">${p.status}</span></td>
-                <td class="px-6 py-4"><button onclick="showOverlay('${overlay}', ${p.id})" class="${actionClass} text-sm font-medium">${actionText}</button></td>
-            </tr>
+    let html = '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6">';
+    details.forEach(detail => {
+        html += `
+            <div>
+                <dt class="text-sm font-medium text-slate-500">${detail.label}</dt>
+                <dd class="mt-1 text-base text-slate-900 font-semibold">${detail.value}</dd>
+            </div>
         `;
-    };
-
-    const renderSection = (title, permits) => {
-        if (permits.length === 0) return '';
-        return `
-            <div>
-                <h3 class="text-lg font-semibold text-slate-800 mb-3">${title}</h3>
-                <div class="bg-white rounded-lg shadow-sm overflow-hidden border border-slate-200">
-                    <table class="min-w-full"><tbody class="divide-y divide-slate-200">${permits.map(renderPermitRow).join('')}</tbody></table>
-                </div>
-            </div>`;
-    };
-
-    return `
-        <div class="flex justify-between items-center mb-6">
-            <h2 class="text-2xl font-bold text-slate-900">Supervisor Dashboard</h2>
-            <button class="btn bg-indigo-600 text-white px-4 py-2 rounded-md font-medium hover:bg-indigo-700 text-sm flex items-center gap-2">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-                New Permit
-            </button>
-        </div>
-        <div class="space-y-8">
-            ${renderSection('Action Required', actionRequired)}
-            ${renderSection('In Progress', inProgress)}
-            ${renderSection('Recently Closed', recentlyClosed)}
-        </div>
-    `;
+    });
+    html += '</div>';
+    return html;
 }
 
-function renderWorkerDashboard() {
-    const tasks = MOCK_DB.permits.filter(p => ['Pending Approval', 'LOTO In Progress', 'Active'].includes(p.status));
-    return `
-        <h2 class="text-2xl font-bold mb-6 text-slate-900">My Tasks</h2>
-        <div class="space-y-6">
-            ${tasks.length > 0 ? tasks.map(p => renderWorkerTask(p)).join('') : `<div class="bg-white p-10 rounded-lg shadow-sm text-center text-slate-500">No active tasks assigned.</div>`}
-        </div>
+function renderAuthorizationContent(permit) {
+    const auths = MOCK_DB.authorizations[permit.id] || [];
+    const requiredRoles = ['Requestor', 'Area Authority', 'Approver', 'Issuer'];
+    
+    let html = `
+        <h3 class="text-xl font-bold text-slate-900 mb-1">Permit Authorization</h3>
+        <p class="text-sm text-slate-500 mb-8">Record of all personnel who have signed off on this permit.</p>
+        <div class="space-y-4">
     `;
-}
 
-function renderWorkerTask(permit) {
-    let title, description, buttonText, action, buttonClass, icon;
-    if (permit.status === 'Pending Approval') {
-        title = 'Action Required: Pre-Work Checklist';
-        description = `Permit <strong>${permit.number}</strong> requires you to complete the pre-work checklist before it can be approved.`;
-        buttonText = 'Complete Pre-Work Checklist';
-        action = `showOverlay('checklist', ${permit.id})`;
-        buttonClass = "bg-yellow-500 hover:bg-yellow-600 text-white";
-        icon = `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>`;
-    } else if (permit.status === 'LOTO In Progress') {
-        title = 'High Priority: Energy Isolation Required';
-        description = `Permit <strong>${permit.number}</strong> requires you to perform Lockout/Tagout before work can begin.`;
-        buttonText = 'Perform LOTO';
-        action = `showOverlay('loto', ${permit.id})`;
-        buttonClass = "bg-indigo-600 hover:bg-indigo-700 text-white";
-        icon = `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>`;
-    } else { // Active
-        title = 'Work In Progress: Complete Permit';
-        description = `Permit <strong>${permit.number}</strong> is active. When work is finished, proceed to the post-work checklist.`;
-        buttonText = 'Complete Post-Work Checklist';
-        action = `showOverlay('checklist', ${permit.id})`;
-        buttonClass = "bg-green-600 hover:bg-green-700 text-white";
-        icon = `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>`;
-    }
-    return `
-        <div class="bg-white p-6 rounded-lg shadow-sm">
-            <div class="flex items-start gap-4">
-                <div class="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center ${buttonClass.split(' ')[0]} bg-opacity-10 text-white">
-                    <div class="w-10 h-10 rounded-full flex items-center justify-center ${buttonClass.split(' ')[0]}">
-                        ${icon}
+    requiredRoles.forEach(role => {
+        const auth = auths.find(a => a.role === role);
+        html += `
+            <div class="flex items-center justify-between p-4 rounded-lg ${auth ? 'bg-green-50 border-green-200' : 'bg-slate-50 border-slate-200'} border">
+                <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 rounded-full flex items-center justify-center ${auth ? 'bg-green-100 text-green-600' : 'bg-slate-200 text-slate-500'}">
+                        ${auth ? `<svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>` : `<svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-13a.75.75 0 00-1.5 0v5c0 .414.336.75.75.75h4a.75.75 0 000-1.5h-3.25V5z" clip-rule="evenodd" /></svg>`}
+                    </div>
+                    <div>
+                        <p class="font-bold text-slate-800">${role}</p>
+                        <p class="text-sm ${auth ? 'text-slate-600' : 'text-slate-500'}">${auth ? `Signed by ${auth.name}` : 'Pending Signature'}</p>
                     </div>
                 </div>
-                <div>
-                    <h3 class="font-bold text-lg text-slate-900">${title}</h3>
-                    <p class="text-slate-600 mt-1">${description}</p>
-                </div>
+                ${auth ? `<div class="text-right"><p class="font-semibold text-sm text-slate-700">${new Date(auth.date).toLocaleDateString()}</p><p class="text-xs text-slate-500">${new Date(auth.date).toLocaleTimeString()}</p></div>` : `<button class="btn bg-white border border-slate-300 text-slate-700 px-4 py-2 rounded-md font-medium hover:bg-slate-100 text-sm">Sign</button>`}
             </div>
-            <div class="mt-6">
-                <button class="w-full text-lg font-bold py-4 rounded-lg btn ${buttonClass}" onclick="${action}">${buttonText}</button>
-            </div>
-        </div>
-    `;
+        `;
+    });
+
+    html += `</div>`;
+    return html;
 }
 
-function renderSimopsDashboard() {
-    const conflictPermit = MOCK_DB.permits.find(p => p.status === 'SIMOPS Hold');
-    return `
-        <h2 class="text-2xl font-bold mb-6 text-slate-900">SIMOPS Coordination Center</h2>
-        ${conflictPermit ? `
-        <div class="bg-white rounded-lg shadow-sm overflow-hidden border border-red-200">
-            <div class="p-6">
-                <h3 class="font-bold text-lg text-red-700">Active Conflict Detected</h3>
-                <p class="text-slate-500 mt-2">Permit <strong>${conflictPermit.number}</strong> is on hold due to a spatial and procedural conflict.</p>
-            </div>
-            <div class="bg-slate-100 h-64 flex items-center justify-center relative border-y border-slate-200">
-                <div class="absolute w-24 h-24 bg-red-500/10 rounded-full animate-ping"></div>
-                <div class="absolute w-24 h-24 bg-red-500/10 rounded-full" style="animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite; animation-delay: 0.5s;"></div>
-                <div class="absolute w-20 h-20 bg-red-500 rounded-full flex items-center justify-center text-white font-bold shadow-lg">Area 5</div>
-                <div class="absolute top-4 left-4 bg-white p-2 rounded text-xs shadow">Permit: ${conflictPermit.number} (Hot Work)</div>
-                <div class="absolute bottom-4 right-4 bg-white p-2 rounded text-xs shadow">Permit: PTW-2025-003 (Crane Lift)</div>
-            </div>
-            <div class="p-6">
-                <button class="w-full bg-red-600 text-white px-4 py-3 rounded-md font-medium hover:bg-red-700 btn flex items-center justify-center gap-2" onclick="showOverlay('simops', ${conflictPermit.id})">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                    Open Conflict Resolution Workflow
-                </button>
-            </div>
-        </div>
-        ` : `<div class="bg-white p-10 rounded-lg shadow-sm text-center text-slate-500">No active SIMOPS conflicts.</div>`}
-    `;
-}
-
-function renderSimopsResolutionView(permit) {
-    const conflictPermit = MOCK_DB.permits.find(p => p.id === permit.simops.conflictWith);
-    return `
-        <div class="p-6 border-b border-slate-200 flex-shrink-0 flex items-center gap-4">
-            <div class="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center"><svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg></div>
-            <div>
-                <h3 class="text-xl font-bold text-red-700">SIMOPS Conflict Resolution</h3>
-                <p class="text-sm text-slate-500">A mitigation plan must be documented and approved to proceed.</p>
-            </div>
-        </div>
-        <div class="p-6 overflow-y-auto flex-grow grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="space-y-6">
-                <div><h4 class="font-semibold text-slate-700">1. Conflict Details</h4><div class="mt-2 p-3 bg-slate-50 rounded border border-red-200 text-sm space-y-1"><p><strong>Conflicting Permits:</strong> ${permit.number} & ${conflictPermit.number}</p><p><strong>Rule Violated:</strong> ${permit.simops.rule}</p></div></div>
-                <div><h4 class="font-semibold text-slate-700">2. Collaboration Log</h4><div class="mt-2 p-3 bg-slate-50 rounded border border-slate-200 space-y-2 text-xs h-32 overflow-y-auto"><p><strong class="text-blue-600">[10:05] SIMOPS Coord:</strong> Conflict detected. Please propose mitigation.</p><p><strong class="text-green-600">[10:15] Supervisor A (Welding):</strong> We can halt welding during the lift.</p><p><strong class="text-yellow-600">[10:18] Supervisor B (Crane):</strong> Agree. Lift duration is approx. 30 mins. We will establish a 50m exclusion zone.</p></div></div>
-            </div>
-            <div class="space-y-6">
-                <div><h4 class="font-semibold text-slate-700">3. Formal Mitigation Plan</h4><textarea class="w-full mt-1 p-2 bg-white border-slate-300 rounded-md text-sm focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500" rows="6">1. All hot work will cease 15 minutes prior to crane lift commencement.\n2. A 50-meter exclusion zone will be physically barricaded by the crane team.\n3. Radio communication will be maintained between both supervisors.\n4. Hot work may only resume after the crane team confirms "lift complete and area safe" over radio.</textarea></div>
-                <div><h4 class="font-semibold text-slate-700">4. SIMOPS Coordinator Approval</h4><p class="text-xs text-slate-500">I confirm the mitigation plan is sufficient to control the risks.</p></div>
-            </div>
-        </div>
-        <div class="p-4 bg-slate-50 border-t border-slate-200 flex-shrink-0 flex justify-between items-center">
-            <button class="btn bg-white border border-slate-300 text-slate-700 px-4 py-2 rounded-md text-sm font-medium hover:bg-slate-100" onclick="hideAllOverlays()">Cancel</button>
-            <button class="btn bg-red-600 text-white px-6 py-2 rounded-md font-semibold text-sm" onclick="resolveSimopsConflict(${permit.id})">Approve Mitigation & Release Hold</button>
-        </div>
-    `;
-}
-
-function renderLotoWorkflowView(permit) {
-    return `
-        <div class="p-6 border-b border-slate-200 flex-shrink-0 flex items-center gap-4">
-            <div class="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center"><svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg></div>
-            <div>
-                <h3 class="text-xl font-bold text-indigo-700">LOTO Procedure: Zero Energy State</h3>
-                <p class="text-sm text-slate-500">For Permit ${permit.number} - ${permit.desc}</p>
-            </div>
-        </div>
-        <div id="loto-steps-container" class="p-6 overflow-y-auto flex-grow space-y-2"></div>
-        <div class="p-4 bg-slate-50 border-t border-slate-200 flex-shrink-0 flex justify-end">
-            <button class="btn bg-white border border-slate-300 text-slate-700 px-4 py-2 rounded-md text-sm font-medium hover:bg-slate-100" onclick="hideAllOverlays()">Close</button>
-        </div>
-    `;
-}
-
-function renderChecklistView(permit, type) {
+function renderChecklistsContent(permit) {
+    const type = (permit.status === 'Active' || (permit.status === 'LOTO In Progress' && permit.loto.state === 'Removing')) ? 'Post-Work' : 'Pre-Work';
     const items = type === 'Pre-Work' 
-        ? ['PPE Verified (Hard hat, gloves, harness)', 'Hazard Identification Completed (JSA Attached)', 'Toolbox Talk Confirmed with Team']
-        : ['Site cleanup complete', 'Equipment and tools returned', 'Barricades removed'];
+        ? ['PPE Verified (Hard hat, gloves, harness)', 'Hazard Identification Completed (JSA Attached)', 'Toolbox Talk Confirmed with Team', 'Work area inspected and safe']
+        : ['Site cleanup complete', 'Equipment and tools returned', 'Barricades removed', 'Final inspection conducted'];
+    
     return `
-        <div class="p-6 border-b border-slate-200 flex-shrink-0 flex items-center gap-4">
-            <div class="w-12 h-12 rounded-full bg-yellow-100 flex items-center justify-center"><svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg></div>
-            <div>
-                <h3 class="text-xl font-bold text-slate-900">${type} Checklist</h3>
-                <p class="text-sm text-slate-500">For Permit ${permit.number} - ${permit.desc}</p>
-            </div>
+        <h3 class="text-xl font-bold text-slate-900 mb-1">${type} Checklist</h3>
+        <p class="text-sm text-slate-500 mb-8">Complete all items to proceed to the next stage.</p>
+        <div class="space-y-4">
+            ${items.map(item => `
+                <label class="flex items-center p-4 bg-white border border-slate-200 rounded-lg hover:bg-slate-50/70 transition-colors cursor-pointer shadow-sm">
+                    <input type="checkbox" class="h-5 w-5 text-sky-600 border-slate-300 rounded focus:ring-sky-500 checklist-item">
+                    <span class="ml-4 text-slate-700 font-medium">${item}</span>
+                </label>
+            `).join('')}
         </div>
-        <div class="p-6 overflow-y-auto flex-grow">
-            <div class="space-y-4">
-                ${items.map(item => `
-                    <label class="flex items-center p-4 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer">
-                        <input type="checkbox" class="h-5 w-5 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 checklist-item">
-                        <span class="ml-4 text-slate-700 font-medium">${item}</span>
-                    </label>
-                `).join('')}
-            </div>
-        </div>
-        <div class="p-4 bg-slate-50 border-t border-slate-200 flex-shrink-0 flex justify-end gap-3">
-            <button class="btn bg-white border border-slate-300 text-slate-700 px-4 py-2 rounded-md text-sm font-medium hover:bg-slate-100" onclick="hideAllOverlays()">Cancel</button>
-            <button id="checklist-confirm-btn" class="btn bg-indigo-600 text-white px-6 py-2 rounded-md font-semibold text-sm disabled:bg-slate-300" disabled>Confirm & Sign</button>
+        <div class="mt-8 flex justify-end">
+            <button id="checklist-confirm-btn" class="btn bg-sky-600 text-white px-8 py-3 rounded-lg font-semibold text-sm disabled:bg-slate-300 disabled:cursor-not-allowed" disabled>Confirm & Sign Checklist</button>
         </div>
     `;
 }
 
-// --- INTERACTIVE WORKFLOW LOGIC ---
-
-function setupChecklistUI(permit, type) {
-    const checklistItems = document.querySelectorAll('#checklist-content .checklist-item');
+function setupChecklistUI(permit) {
+    const checklistItems = document.querySelectorAll('#checklists-tab .checklist-item');
     const confirmBtn = getEl('checklist-confirm-btn');
+    if (!confirmBtn) return;
     
     const checkCompletion = () => {
         const allChecked = Array.from(checklistItems).every(item => item.checked);
@@ -458,6 +380,7 @@ function setupChecklistUI(permit, type) {
     checklistItems.forEach(item => item.onchange = checkCompletion);
 
     confirmBtn.onclick = () => {
+        const type = (permit.status === 'Active' || (permit.status === 'LOTO In Progress' && permit.loto.state === 'Removing')) ? 'Post-Work' : 'Pre-Work';
         if (type === 'Pre-Work') {
             permit.status = permit.loto.required ? 'LOTO In Progress' : 'Active';
             if (permit.loto.required) permit.loto.state = 'Applying';
@@ -465,53 +388,64 @@ function setupChecklistUI(permit, type) {
         } else { // Post-Work
             if (permit.loto.required) {
                 permit.loto.state = 'Removing';
-                showOverlay('loto', permit.id);
+                AppState.activeTab = 'loto';
+                hideModal();
             } else {
                 permit.status = 'Closed';
                 showModal('Work Complete', `Permit ${permit.number} has been successfully closed.`);
             }
         }
-        renderPageContent(AppState.currentUserRole);
     };
+}
+
+function renderLotoContent(permit) {
+     return `
+        <h3 class="text-xl font-bold text-slate-900 mb-1">LOTO Procedure: Zero Energy State</h3>
+        <p class="text-sm text-slate-500 mb-8">Follow the steps below to ensure the equipment is safely isolated before and after work.</p>
+        <div id="loto-steps-container" class="space-y-3"></div>
+    `;
 }
 
 function setupLotoWorkflowUI(permit) {
     const container = getEl('loto-steps-container');
+    if (!container) return;
+    
     const steps = [
         { id: 'apply', title: 'Apply Locks & Tags', responsible: 'LOTO Authority', content: renderLotoApplyContent(permit) },
         { id: 'verify', title: 'Verify Zero Energy', responsible: 'Supervisor', content: renderLotoVerifyContent(permit) },
         { id: 'remove', title: 'Remove Locks & Tags', responsible: 'LOTO Authority', content: renderLotoRemoveContent(permit) }
     ];
     
-    container.innerHTML = steps.map((step, index) => `
-        <div id="loto-step-${step.id}" class="loto-step loto-step-pending p-4 rounded-lg bg-white border border-slate-200">
-            <div class="flex justify-between items-center w-full cursor-pointer" onclick="toggleLotoStep('${step.id}')">
-                <div class="flex items-center">
-                    <div id="loto-step-icon-${step.id}" class="w-10 h-10 rounded-full flex items-center justify-center bg-slate-200 text-slate-500 mr-4">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
-                    </div>
+    container.innerHTML = steps.map((step) => `
+        <div id="loto-step-${step.id}" class="loto-step rounded-lg bg-white border border-slate-200 shadow-sm overflow-hidden">
+            <div class="flex justify-between items-center w-full cursor-pointer p-4" onclick="toggleLotoStep('${step.id}')">
+                <div class="flex items-center gap-4">
+                    <div id="loto-step-icon-${step.id}" class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"></div>
                     <div>
                         <h5 class="font-semibold text-slate-800">${step.title}</h5>
                         <p class="text-xs text-slate-500">Task for: ${step.responsible}</p>
                     </div>
                 </div>
-                <div id="loto-step-status-${step.id}" class="text-xs font-bold text-slate-500">PENDING</div>
+                <div id="loto-step-status-${step.id}" class="text-xs font-bold"></div>
             </div>
-            <div id="loto-step-content-${step.id}" class="loto-step-content pl-16 pt-4">${step.content}</div>
+            <div id="loto-step-content-${step.id}" class="loto-step-content"><div class="px-4 pb-4 pl-18">${step.content}</div></div>
         </div>
     `).join('');
 
     if (!MOCK_DB.lotoStates[permit.id]) {
         MOCK_DB.lotoStates[permit.id] = {};
         permit.loto.points.forEach(p => {
-            MOCK_DB.lotoStates[permit.id][p] = { applied: false, verified: false, removed: false, lock: '', tag: '', photo: null };
+            MOCK_DB.lotoStates[permit.id][p] = { applied: false, verified: false, removed: false };
         });
     }
 
     permit.loto.points.forEach(pointName => {
         const pointId = MOCK_DB.lotoPointsData[pointName].id;
-        getEl(`loto-apply-photo-${pointId}`).onchange = () => handleLotoEvidenceUpload(permit.id, pointName, 'apply');
-        getEl(`loto-remove-photo-${pointId}`).onchange = () => handleLotoEvidenceUpload(permit.id, pointName, 'remove');
+        const applyInput = getEl(`loto-apply-photo-${pointId}`);
+        if(applyInput) applyInput.onchange = () => handleLotoEvidenceUpload(permit.id, pointName, 'apply');
+        
+        const removeInput = getEl(`loto-remove-photo-${pointId}`);
+        if(removeInput) removeInput.onchange = () => handleLotoEvidenceUpload(permit.id, pointName, 'remove');
     });
 
     updateLotoUI(permit);
@@ -521,9 +455,7 @@ function toggleLotoStep(stepId) {
     const content = getEl(`loto-step-content-${stepId}`);
     if (content.style.maxHeight && content.style.maxHeight !== '0px') {
         content.style.maxHeight = '0px';
-        content.style.paddingTop = '0px';
     } else {
-        content.style.paddingTop = '1rem';
         content.style.maxHeight = content.scrollHeight + "px";
     }
 }
@@ -545,92 +477,103 @@ function updateLotoUI(permit) {
         const contentEl = getEl(`loto-step-content-${id}`);
         const iconContainer = getEl(`loto-step-icon-${id}`);
         
-        stepEl.className = 'loto-step p-4 rounded-lg bg-white border border-slate-200';
+        stepEl.classList.remove('loto-step-active', 'loto-step-complete', 'loto-step-pending');
         
         if (id === activeStepId) {
             stepEl.classList.add('loto-step-active');
             statusEl.textContent = 'IN PROGRESS';
-            statusEl.className = 'text-xs font-bold text-indigo-600';
-            iconContainer.className = 'w-10 h-10 rounded-full flex items-center justify-center bg-indigo-100 text-indigo-600';
-            contentEl.style.paddingTop = '1rem';
-            contentEl.style.maxHeight = contentEl.scrollHeight + "px";
+            statusEl.className = 'text-xs font-bold text-sky-700';
+            iconContainer.className = 'w-10 h-10 rounded-full flex items-center justify-center bg-sky-100 text-sky-600';
+            iconContainer.innerHTML = `<svg class="w-6 h-6 animate-spin" style="animation-duration: 3s;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>`;
+            if (!contentEl.style.maxHeight || contentEl.style.maxHeight === '0px') toggleLotoStep(id);
         } else if ((id === 'apply' && allApplied) || (id === 'verify' && allVerified) || (id === 'remove' && allRemoved)) {
             stepEl.classList.add('loto-step-complete');
             statusEl.textContent = 'COMPLETE';
-            statusEl.className = 'text-xs font-bold text-green-600';
-            iconContainer.className = 'w-10 h-10 rounded-full flex items-center justify-center bg-green-100 text-green-600';
+            statusEl.className = 'text-xs font-bold text-emerald-700';
+            iconContainer.className = 'w-10 h-10 rounded-full flex items-center justify-center bg-emerald-100 text-emerald-600';
             iconContainer.innerHTML = `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
-            contentEl.style.maxHeight = '0px';
-            contentEl.style.paddingTop = '0px';
+            if (contentEl.style.maxHeight !== '0px') toggleLotoStep(id);
         } else {
             stepEl.classList.add('loto-step-pending');
             statusEl.textContent = 'PENDING';
             statusEl.className = 'text-xs font-bold text-slate-500';
-            contentEl.style.maxHeight = '0px';
-            contentEl.style.paddingTop = '0px';
+            iconContainer.className = 'w-10 h-10 rounded-full flex items-center justify-center bg-slate-200 text-slate-500';
+            iconContainer.innerHTML = `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>`;
+            if (contentEl.style.maxHeight !== '0px') toggleLotoStep(id);
         }
     });
+    
+    const applyBtn = getEl('loto-apply-confirm-btn');
+    if (applyBtn) applyBtn.disabled = !allApplied;
+    
+    const verifyBtn = getEl('loto-verify-btn');
+    if (verifyBtn) verifyBtn.disabled = !allApplied || allVerified;
 
-    getEl('loto-apply-confirm-btn').disabled = !allApplied;
-    getEl('loto-verify-btn').disabled = !allApplied || allVerified;
-    getEl('loto-remove-confirm-btn').disabled = !allRemoved;
+    const removeBtn = getEl('loto-remove-confirm-btn');
+    if (removeBtn) removeBtn.disabled = !allRemoved;
 }
 
 function renderLotoApplyContent(permit) {
-    return permit.loto.points.map(pointName => {
+    return permit.loto.points.map((pointName, index) => {
         const pointData = MOCK_DB.lotoPointsData[pointName];
         return `
-        <div class="p-3 bg-slate-50 rounded-md mb-2 border border-slate-200">
-            <p class="font-medium text-sm text-slate-800">${pointName}</p>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+        <div class="p-4 rounded-lg mb-3 border ${index % 2 === 0 ? 'bg-slate-50' : 'bg-white'}">
+            <p class="font-semibold text-slate-800">${pointName}</p>
+            <p class="text-xs text-slate-500 mb-3">Location: ${pointData.location}</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div class="flex items-center space-x-2">
-                    <input type="text" placeholder="Lock #" class="bg-white p-1.5 border-slate-300 rounded text-sm w-full focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500">
-                    <input type="text" placeholder="Tag #" class="bg-white p-1.5 border-slate-300 rounded text-sm w-full focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500">
+                    <input type="text" placeholder="Lock #" class="bg-white p-2 border-slate-300 rounded-md text-sm w-full focus:ring-1 focus:ring-sky-500 focus:border-sky-500">
+                    <input type="text" placeholder="Tag #" class="bg-white p-2 border-slate-300 rounded-md text-sm w-full focus:ring-1 focus:ring-sky-500 focus:border-sky-500">
                 </div>
                 <div class="flex items-center justify-end">
-                    <label id="loto-apply-label-${pointData.id}" class="btn cursor-pointer text-sm bg-slate-200 text-slate-700 px-3 py-1.5 rounded-md hover:bg-slate-300">
+                    <label id="loto-apply-label-${pointData.id}" class="btn cursor-pointer text-sm bg-white border border-slate-300 text-slate-700 px-3 py-2 rounded-md hover:bg-slate-100 flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
                         Upload Evidence
                         <input type="file" id="loto-apply-photo-${pointData.id}" class="hidden">
                     </label>
                     <div id="loto-apply-feedback-${pointData.id}" class="hidden items-center text-sm text-green-700 font-medium gap-1">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                         <span>Uploaded</span>
                     </div>
                 </div>
             </div>
         </div>
-    `}).join('') + `<button class="w-full mt-4 btn bg-indigo-600 text-white py-2 rounded-md font-semibold text-sm disabled:bg-slate-300" id="loto-apply-confirm-btn" onclick="confirmLotoApply(${permit.id})" disabled>Confirm All Locks Applied</button>`;
+    `}).join('') + `<div class="mt-4 flex justify-end"><button class="btn bg-sky-600 text-white py-2 px-6 rounded-lg font-semibold text-sm disabled:bg-slate-300" id="loto-apply-confirm-btn" onclick="confirmLotoApply(${permit.id})" disabled>Confirm All Locks Applied</button></div>`;
 }
 
 function renderLotoVerifyContent(permit) {
-    return `<p class="text-sm text-slate-500 mb-4">A separate authorized user must review evidence and physically try to start the equipment to verify it cannot be energized.</p>` +
+    return `<p class="text-sm text-slate-600 mb-4">A separate authorized user must review evidence and physically try to start the equipment to verify it cannot be energized.</p>` +
     permit.loto.points.map(pointName => {
-        return `<div class="p-2 bg-slate-100 rounded-md text-sm mb-2 flex justify-between items-center">
-                    <span>Evidence for: <strong>${pointName}</strong></span>
-                    <a href="#" class="text-indigo-600 underline font-medium">View Photo</a>
+        return `<div class="p-3 bg-slate-100 rounded-md text-sm mb-2 flex justify-between items-center">
+                    <span class="font-medium">Evidence for: <strong>${pointName}</strong></span>
+                    <a href="#" class="text-sky-600 hover:underline font-medium flex items-center gap-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                        View Photo
+                    </a>
                 </div>`;
-    }).join('') + `<button id="loto-verify-btn" class="w-full mt-4 btn bg-indigo-600 text-white py-2 rounded-md font-semibold text-sm disabled:bg-slate-300" onclick="confirmLotoVerify(${permit.id})" disabled>Confirm Zero Energy State</button>`;
+    }).join('') + `<div class="mt-4 flex justify-end"><button id="loto-verify-btn" class="btn bg-sky-600 text-white py-2 px-6 rounded-lg font-semibold text-sm disabled:bg-slate-300" onclick="confirmLotoVerify(${permit.id})" disabled>Confirm Zero Energy State</button></div>`;
 }
 
 function renderLotoRemoveContent(permit) {
-    return `<p class="text-sm text-slate-500 mb-4">After work is complete, the original LOTO authority removes their locks/tags and uploads evidence.</p>` +
-    permit.loto.points.map(pointName => {
+    return `<p class="text-sm text-slate-600 mb-4">After work is complete, the original LOTO authority removes their locks/tags and uploads evidence of removal.</p>` +
+    permit.loto.points.map((pointName, index) => {
         const pointId = MOCK_DB.lotoPointsData[pointName].id;
         return `
-        <div class="p-3 bg-slate-50 rounded-md mb-2 border border-slate-200">
+        <div class="p-4 rounded-lg mb-3 border ${index % 2 === 0 ? 'bg-slate-50' : 'bg-white'}">
             <div class="flex justify-between items-center">
-                <p class="font-medium text-sm text-slate-800">${pointName}</p>
-                <label id="loto-remove-label-${pointId}" class="btn cursor-pointer text-sm bg-slate-200 text-slate-700 px-3 py-1.5 rounded-md hover:bg-slate-300">
-                    Upload Evidence
+                <p class="font-semibold text-slate-800">${pointName}</p>
+                <label id="loto-remove-label-${pointId}" class="btn cursor-pointer text-sm bg-white border border-slate-300 text-slate-700 px-3 py-2 rounded-md hover:bg-slate-100 flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                    Upload Removal Evidence
                     <input type="file" id="loto-remove-photo-${pointId}" class="hidden">
                 </label>
                 <div id="loto-remove-feedback-${pointId}" class="hidden items-center text-sm text-green-700 font-medium gap-1">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                     <span>Uploaded</span>
                 </div>
             </div>
         </div>
-    `}).join('') + `<button class="w-full mt-4 btn bg-indigo-600 text-white py-2 rounded-md font-semibold text-sm disabled:bg-slate-300" id="loto-remove-confirm-btn" onclick="confirmLotoRemove(${permit.id})" disabled>Confirm All Locks Removed</button>`;
+    `}).join('') + `<div class="mt-4 flex justify-end"><button class="btn bg-sky-600 text-white py-2 px-6 rounded-lg font-semibold text-sm disabled:bg-slate-300" id="loto-remove-confirm-btn" onclick="confirmLotoRemove(${permit.id})" disabled>Confirm All Locks Removed</button></div>`;
 }
 
 function handleLotoEvidenceUpload(permitId, pointName, step) {
@@ -642,12 +585,11 @@ function handleLotoEvidenceUpload(permitId, pointName, step) {
     
     if (input.files.length > 0) {
         label.classList.add('hidden');
+        feedback.classList.remove('hidden');
         feedback.classList.add('flex');
         MOCK_DB.lotoStates[permitId][pointName][step === 'apply' ? 'applied' : 'removed'] = true;
     }
-
-    const allDone = permit.loto.points.every(p => MOCK_DB.lotoStates[permitId][p][step === 'apply' ? 'applied' : 'removed']);
-    getEl(`loto-${step}-confirm-btn`).disabled = !allDone;
+    updateLotoUI(permit);
 }
 
 function confirmLotoApply(permitId) {
@@ -665,13 +607,44 @@ function confirmLotoVerify(permitId) {
     permit.loto.points.forEach(p => state[p].verified = true);
     permit.status = 'Active';
     updateLotoUI(permit);
-    showModal('LOTO Verified', `Permit ${permit.number} is now Active. Work can begin safely.`, [{text: 'OK', class: 'btn bg-indigo-600 hover:bg-indigo-700 text-white', action: hideAllOverlays}]);
+    showModal('LOTO Verified', `Permit ${permit.number} is now Active. Work can begin safely.`, [{text: 'OK', class: 'btn bg-sky-600 hover:bg-sky-700 text-white', action: hideModal}]);
 }
 
 function confirmLotoRemove(permitId) {
     const permit = MOCK_DB.permits.find(p => p.id === permitId);
     permit.status = 'Closed';
-    showModal('LOTO Removed & Permit Closed', `All isolations for permit ${permit.number} have been removed and the permit is now closed.`, [{text: 'OK', class: 'btn bg-indigo-600 hover:bg-indigo-700 text-white', action: hideAllOverlays}]);
+    showModal('LOTO Removed & Permit Closed', `All isolations for permit ${permit.number} have been removed and the permit is now closed.`, [{text: 'OK', class: 'btn bg-sky-600 hover:bg-sky-700 text-white', action: hideModal}]);
+}
+
+function renderSimopsContent(permit) {
+    const conflictPermit = MOCK_DB.permits.find(p => p.id === permit.simops.conflictWith);
+    return `
+        <div class="bg-red-50 border border-red-200 p-6 rounded-lg">
+            <div class="flex items-start gap-4">
+                <div class="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0"><svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg></div>
+                <div>
+                    <h3 class="text-xl font-bold text-red-800">SIMOPS Conflict Resolution</h3>
+                    <p class="text-sm text-red-700 mt-1">A mitigation plan must be documented and approved to proceed.</p>
+                </div>
+            </div>
+            <div class="mt-6 space-y-6">
+                <div>
+                    <h4 class="font-semibold text-slate-700">1. Conflict Details</h4>
+                    <div class="mt-2 p-4 bg-white rounded-md border border-red-200 text-sm space-y-2">
+                        <p><strong>Conflicting Permits:</strong> <span class="font-mono bg-red-100 text-red-800 px-2 py-1 rounded">${permit.number}</span> & <span class="font-mono bg-red-100 text-red-800 px-2 py-1 rounded">${conflictPermit.number}</span></p>
+                        <p><strong>Rule Violated:</strong> ${permit.simops.rule}</p>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="font-semibold text-slate-700">2. Formal Mitigation Plan</h4>
+                    <textarea class="w-full mt-2 p-3 bg-white border-slate-300 rounded-md text-sm focus:ring-1 focus:ring-sky-500 focus:border-sky-500 shadow-sm" rows="6">1. All hot work will cease 15 minutes prior to crane lift commencement.\n2. A 50-meter exclusion zone will be physically barricaded by the crane team.\n3. Radio communication will be maintained between both supervisors.\n4. Hot work may only resume after the crane team confirms "lift complete and area safe" over radio.</textarea>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end">
+                <button class="btn bg-red-600 text-white px-6 py-3 rounded-lg font-semibold text-sm" onclick="resolveSimopsConflict(${permit.id})">Approve Mitigation & Release Hold</button>
+            </div>
+        </div>
+    `;
 }
 
 function resolveSimopsConflict(permitId) {
@@ -680,13 +653,23 @@ function resolveSimopsConflict(permitId) {
     showModal(
         'Conflict Resolved',
         `The SIMOPS hold on permit ${permit.number} has been lifted. It is now back in 'Pending Approval' status.`,
-        [{ text: 'OK', class: 'btn bg-indigo-600 hover:bg-indigo-700 text-white', action: hideAllOverlays }]
+        [{ text: 'OK', class: 'btn bg-sky-600 hover:bg-sky-700 text-white', action: hideModal }]
     );
 }
 
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', () => {
-    switchRole('supervisor');
+    const selector = getEl('permit-selector');
+    MOCK_DB.permits.forEach(p => {
+        const option = document.createElement('option');
+        option.value = p.id;
+        option.textContent = `${p.number} (${p.status})`;
+        if (p.id === AppState.activePermitId) option.selected = true;
+        selector.appendChild(option);
+    });
+    selector.onchange = (e) => switchPermit(e.target.value);
+    
+    renderApp();
 });
 
 </script>
