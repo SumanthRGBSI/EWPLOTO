@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" class="h-full bg-slate-100">
-<head>
+<head> 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EHS - Electronic Work Permit System</title>
@@ -60,7 +60,7 @@
         /* Modal transitions */
         #modal-overlay.active { opacity: 1; pointer-events: auto; }
         #modal-content.active { transform: scale(1) translateY(0); }
-        #modal-content { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); transform: scale(0.95) translateY(20px); }
+        #modal-content { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); transform: scale(0.95) translateY(20px); max-height: 90vh; overflow-y: auto; }
     </style>
 </head>
 <body class="text-slate-800">
@@ -126,7 +126,7 @@ const MOCK_DB = {
         {
             id: 'TPL-HW-01', name: 'Standard Hot Work', description: 'Template for welding, cutting, and grinding operations.',
             fields: [
-                { id: 'f1', name: 'Fire Watch Required', type: 'Boolean', required: true, options: [] },
+                { id: 'f1', name: 'Fire Watch Required', type: 'Boolean', required: true, options: ['Yes', 'No'] },
                 { id: 'f2', name: 'Gas Detector Reading (LEL %)', type: 'Decimal', required: true, options: [] },
                 { id: 'f3', name: 'Fire Extinguisher Type', type: 'Dropdown', required: true, options: ['CO2', 'Dry Powder', 'Foam'] },
             ],
@@ -137,7 +137,7 @@ const MOCK_DB = {
             id: 'TPL-CSE-01', name: 'Confined Space Entry', description: 'Template for entering tanks, vessels, or pits.',
             fields: [
                 { id: 'f4', name: 'Rescue Plan Attached', type: 'Boolean', required: true, options: [] },
-                { id: 'f5', name: 'Atmospheric Test Results', type: 'Multiline Text', required: true, options: [] },
+                { id: 'f5', name: 'Atmospheric Test Results', type: 'Text Area', required: true, options: [] },
                 { id: 'f6', name: 'Entry Date', type: 'DateTime', required: true, options: [] },
             ],
             preWorkChecklist: ['Verify air monitoring is calibrated.', 'Confirm rescue team is on standby.', 'Isolate all energy sources (LOTO).'],
@@ -164,11 +164,12 @@ const MOCK_DB = {
             ]
         }
     ],
-    permits: [
-        { id: 1, number: 'PTW-2025-001', name: 'Weld support bracket on Pipe Rack R-11', loc: 'Area 5 - Processing Unit', status: 'Pending Approval', type: 'Hot Work', loto: { required: false, assets: [] }, contractor: 'WeldPro Inc.', coordinatorId: 'sjones', ewpTemplateId: 'TPL-HW-01', approvalTemplateId: 'APP-STD-01', startDate: '2025-08-06T09:00', endDate: '2025-08-06T17:00', data: {}, checklists: { pre: {}, post: {} } },
-        { id: 2, number: 'PTW-2025-002', name: 'Confined Space Entry - Tank T-101', loc: 'Area 2', status: 'Issued', type: 'Confined Space', loto: { required: true, assets: [{procedure: 'PROC-001', assetName: 'Breaker PNL-B-03', assetId: 'EQ-1023'}] }, contractor: 'SafeSpace LLC', coordinatorId: 'sjones', ewpTemplateId: 'TPL-CSE-01', approvalTemplateId: 'APP-LOTO-01', startDate: '2025-08-07T08:30', endDate: '2025-08-07T12:30', data: {}, checklists: { pre: {}, post: {} } },
-        { id: 4, number: 'PTW-2025-004', name: 'Pump P-502 Motor Replacement', loc: 'Pump House 1', status: 'Active', type: 'Mechanical', loto: { required: true, assets: [{procedure: 'PROC-002', assetName: 'Breaker PNL-B-03', assetId: 'EQ-1023'}, {procedure: 'PROC-003', assetName: 'Inlet Valve V-502', assetId: 'V-502'}] }, contractor: 'MechServe', coordinatorId: 'sjones', ewpTemplateId: 'TPL-HW-01', approvalTemplateId: 'APP-LOTO-01', startDate: '2025-08-05T10:00', endDate: '2025-08-05T18:00', data: {}, checklists: { pre: {}, post: {} } },
-        { id: 5, number: 'PTW-2025-005', name: 'Electrical Maintenance on Panel P-04', loc: 'Control Room', status: 'Closed', type: 'Electrical', loto: { required: false, assets: [] }, contractor: 'SparkSafe', coordinatorId: 'sjones', ewpTemplateId: 'TPL-HW-01', approvalTemplateId: 'APP-STD-01', startDate: '2025-08-04T13:00', endDate: '2025-08-04T15:00', data: {}, checklists: { pre: {}, post: {} } }
+    permits: [ // Added a 'Draft' permit for testing
+        { id: 1, number: 'PTW-2025-001', name: 'Weld support bracket on Pipe Rack R-11', loc: 'Area 5 - Processing Unit', status: 'Pending Approval', type: 'Hot Work', loto: { required: false, assets: [] }, contractor: 'WeldPro Inc.', coordinatorId: 'sjones', ewpTemplateId: 'TPL-HW-01', approvalTemplateId: 'APP-STD-01', startDate: '2025-08-06T09:00', endDate: '2025-08-06T17:00', data: {f1: 'Yes', f2: 0.5, f3: 'CO2'}, checklists: { pre: { 'Confirm fire extinguisher is present and inspected.': true, 'Verify combustible materials are removed.': true, 'Test gas detector.': false }, post: {} } },
+        { id: 2, number: 'PTW-2025-002', name: 'Confined Space Entry - Tank T-101', loc: 'Area 2', status: 'Issued', type: 'Confined Space', loto: { required: true, assets: [{procedure: 'PROC-001', assetName: 'Breaker PNL-B-03', assetId: 'EQ-1023'}] }, contractor: 'SafeSpace LLC', coordinatorId: 'sjones', ewpTemplateId: 'TPL-CSE-01', approvalTemplateId: 'APP-LOTO-01', startDate: '2025-08-07T08:30', endDate: '2025-08-07T12:30', data: {f4: true, f5: 'O2: 20.9%, LEL: 0%', f6: '2025-08-07T08:00'}, checklists: { pre: { 'Verify air monitoring is calibrated.': true, 'Confirm rescue team is on standby.': true, 'Isolate all energy sources (LOTO).': true }, post: {} } },
+        { id: 3, number: 'PTW-2025-003', name: 'Routine HVAC Maintenance', loc: 'Building A Rooftop', status: 'Draft', type: 'General Work', loto: { required: false, assets: [] }, contractor: 'CoolAir Services', coordinatorId: 'sjones', ewpTemplateId: 'TPL-HW-01', approvalTemplateId: 'APP-STD-01', startDate: '2025-08-08T09:00', endDate: '2025-08-08T13:00', data: {}, checklists: { pre: {}, post: {} } },
+        { id: 4, number: 'PTW-2025-004', name: 'Pump P-502 Motor Replacement', loc: 'Pump House 1', status: 'Active', type: 'Mechanical', loto: { required: true, assets: [{procedure: 'PROC-002', assetName: 'Breaker PNL-B-03', assetId: 'EQ-1023'}, {procedure: 'PROC-003', assetName: 'Inlet Valve V-502', assetId: 'V-502'}] }, contractor: 'MechServe', coordinatorId: 'sjones', ewpTemplateId: 'TPL-HW-01', approvalTemplateId: 'APP-LOTO-01', startDate: '2025-08-05T10:00', endDate: '2025-08-05T18:00', data: {f1: 'No', f2: 0.0, f3: 'Dry Powder'}, checklists: { pre: { 'Confirm fire extinguisher is present and inspected.': true, 'Verify combustible materials are removed.': true, 'Test gas detector.': true }, post: {} } },
+        { id: 5, number: 'PTW-2025-005', name: 'Electrical Maintenance on Panel P-04', loc: 'Control Room', status: 'Closed', type: 'Electrical', loto: { required: false, assets: [] }, contractor: 'SparkSafe', coordinatorId: 'sjones', ewpTemplateId: 'TPL-HW-01', approvalTemplateId: 'APP-STD-01', startDate: '2025-08-04T13:00', endDate: '2025-08-04T15:00', data: {f1: 'No', f2: 0.0, f3: 'CO2'}, checklists: { pre: { 'Confirm fire extinguisher is present and inspected.': true, 'Verify combustible materials are removed.': true, 'Test gas detector.': true }, post: { 'Monitor area for 30 minutes post-work.': true, 'Ensure all equipment is off.': true, 'Clean up work area.': true } } }
     ],
     authorizations: {
         1: [ { role: 'Requestor', userId: 'sjones', date: '2025-08-05 09:15:22' } ],
@@ -272,6 +273,7 @@ function renderDashboard() {
         'Issued': 'bg-sky-100 text-sky-800',
         'Work Stopped': 'bg-amber-100 text-amber-800',
         'LOTO In Progress': 'bg-blue-100 text-blue-800',
+        'Draft': 'bg-slate-200 text-slate-700',
         'Pending Approval': 'bg-yellow-100 text-yellow-800',
         'Approved': 'bg-indigo-100 text-indigo-800',
         'Closed': 'bg-slate-100 text-slate-800',
@@ -290,11 +292,20 @@ function renderDashboard() {
                 <div class="bg-white rounded-xl shadow-md border border-slate-200/80 p-5 flex flex-col justify-between hover:shadow-lg hover:border-slate-300 transition-all">
                     <div>
                         <div class="flex justify-between items-start">
-                             <span class="px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[p.status] || 'bg-gray-100 text-gray-800'}">${p.status}</span>
+                             <span class="px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[p.status] || 'bg-slate-100 text-slate-800'}">${p.status}</span>
                              <span class="text-sm font-semibold text-sky-700">${p.number}</span>
                         </div>
                         <h3 class="font-bold text-slate-800 mt-3 text-lg">${p.name}</h3>
-                        <p class="text-sm text-slate-500 mt-1">${p.loc}</p>
+                        <div class="text-sm text-slate-500 mt-2 space-y-1">
+                            <div class="flex items-center gap-2">
+                                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                                <span>${p.loc}</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                <span>${new Date(p.startDate).toLocaleDateString()} - ${new Date(p.endDate).toLocaleDateString()}</span>
+                            </div>
+                        </div>
                     </div>
                     <div class="mt-5 pt-4 border-t border-slate-200 flex justify-between items-center">
                          <div class="text-sm text-slate-600">
@@ -318,7 +329,7 @@ function renderTemplates() {
             <div>
                 <div class="flex justify-between items-center mb-4">
                     <h3 class="text-xl font-bold text-slate-800">EWP Templates</h3>
-                    <button onclick="renderEwpTemplateForm()" class="btn bg-sky-600 text-white px-4 py-2 rounded-lg font-semibold text-sm flex items-center gap-2 shadow-sm hover:bg-sky-700">
+                    <button data-action="new-ewp-template" class="btn bg-sky-600 text-white px-4 py-2 rounded-lg font-semibold text-sm flex items-center gap-2 shadow-sm hover:bg-sky-700">
                         <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" /></svg>
                         New
                     </button>
@@ -328,7 +339,7 @@ function renderTemplates() {
             <div>
                  <div class="flex justify-between items-center mb-4">
                     <h3 class="text-xl font-bold text-slate-800">Approval Templates</h3>
-                    <button onclick="renderApprovalTemplateForm()" class="btn bg-sky-600 text-white px-4 py-2 rounded-lg font-semibold text-sm flex items-center gap-2 shadow-sm hover:bg-sky-700">
+                    <button data-action="new-approval-template" class="btn bg-sky-600 text-white px-4 py-2 rounded-lg font-semibold text-sm flex items-center gap-2 shadow-sm hover:bg-sky-700">
                         <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" /></svg>
                         New
                     </button>
@@ -339,6 +350,19 @@ function renderTemplates() {
     `;
     renderEwpTemplatesList();
     renderApprovalTemplatesList();
+    attachTemplateViewListeners();
+}
+
+function attachTemplateViewListeners() {
+    const view = Views.templates;
+    view.onclick = (e) => {
+        const button = e.target.closest('button');
+        if (!button) return;
+
+        const action = button.dataset.action;
+        if (action === 'new-ewp-template') renderEwpTemplateForm();
+        if (action === 'new-approval-template') renderApprovalTemplateForm();
+    };
 }
 
 function renderEwpTemplatesList() {
@@ -394,7 +418,7 @@ function renderApprovalTemplatesList() {
 function renderEwpTemplateForm(templateId = null) {
     const isEditing = templateId !== null;
     const template = isEditing ? JSON.parse(JSON.stringify(MOCK_DB.ewpTemplates.find(t => t.id === templateId))) : { id: `TPL-EWP-${Date.now()}`, name: '', description: '', fields: [], preWorkChecklist: [], postWorkChecklist: [] };
-    const fieldTypes = ['String', 'Multiline Text', 'Integer', 'Decimal', 'DateTime', 'Boolean', 'Dropdown'];
+    const fieldTypes = ['Text Input', 'Text Area', 'Number', 'Decimal', 'Date', 'Time', 'Date & Time', 'Boolean', 'Dropdown'];
 
     const formHtml = `
         <form id="ewp-template-form" class="p-8 space-y-6 max-h-[90vh] overflow-y-auto">
@@ -431,7 +455,7 @@ function renderEwpTemplateForm(templateId = null) {
         fieldsContainer.innerHTML = template.fields.map((field, index) => {
             const fieldId = `field-${index}`;
             let optionsHtml = '';
-            if (field.type === 'Dropdown') {
+            if (field.type === 'Dropdown' || field.type === 'Boolean') {
                 optionsHtml = `
                     <div class="mt-2">
                         <div class="flex items-center gap-2">
@@ -457,7 +481,7 @@ function renderEwpTemplateForm(templateId = null) {
                     <div class="flex items-start gap-2">
                         <input type="text" class="flex-grow rounded-md border-slate-300 text-sm" value="${field.name}" placeholder="Field Name" data-index="${index}" data-prop="name">
                         <select class="rounded-md border-slate-300 text-sm" data-index="${index}" data-prop="type">
-                            ${fieldTypes.map(t => `<option ${field.type === t ? 'selected' : ''}>${t}</option>`).join('')}
+                            ${fieldTypes.map(t => `<option value="${t}" ${field.type === t ? 'selected' : ''}>${t}</option>`).join('')}
                         </select>
                         <label class="flex items-center text-sm gap-1.5 whitespace-nowrap pt-2"><input type="checkbox" class="rounded" ${field.required ? 'checked' : ''} data-index="${index}" data-prop="required"> Required</label>
                         <button type="button" data-index="${index}" class="remove-field-btn p-2 text-slate-400 hover:text-red-500 mt-1"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" /></svg></button>
@@ -479,7 +503,11 @@ function renderEwpTemplateForm(templateId = null) {
                 template.fields[index][prop] = value;
                 
                 if (prop === 'type') {
-                    if(value !== 'Dropdown') {
+                    if (value === 'Boolean') {
+                        template.fields[index].options = ['Yes', 'No'];
+                    } else if (value !== 'Dropdown') {
+                        template.fields[index].options = [];
+                    } else if (value === 'Dropdown' && !template.fields[index].options) {
                         template.fields[index].options = [];
                     }
                     renderFields();
@@ -497,7 +525,7 @@ function renderEwpTemplateForm(templateId = null) {
             if (e.target.closest('.add-option-btn')) {
                 const index = e.target.closest('.add-option-btn').dataset.index;
                 const newOptionInput = getEl(`field-${index}-new-option`);
-                if (newOptionInput.value.trim()) {
+                if (newOptionInput && newOptionInput.value.trim()) {
                     if (!template.fields[index].options) {
                         template.fields[index].options = [];
                     }
@@ -520,7 +548,7 @@ function renderEwpTemplateForm(templateId = null) {
     attachFieldListeners();
 
     getEl('add-custom-field-btn').onclick = () => {
-        template.fields.push({ id: `f-${Date.now()}`, name: '', type: 'String', required: false, options: [] });
+        template.fields.push({ id: `f-${Date.now()}`, name: '', type: 'Text Input', required: false, options: [] });
         renderFields();
         attachFieldListeners();
     };
@@ -632,7 +660,7 @@ function renderCreatePermitForm() {
     const now = new Date();
     const startDate = now.toISOString().substring(0, 10);
     const startTime = now.toTimeString().substring(0,5);
-    now.setHours(now.getHours() + 8);
+    now.setHours(now.getHours() + 8); // Set end time 8 hours from now
     const endDate = now.toISOString().substring(0, 10);
     const endTime = now.toTimeString().substring(0,5);
 
@@ -670,7 +698,7 @@ function renderCreatePermitForm() {
                     <div>
                         <label for="permitType" class="block text-sm font-medium text-slate-700">Permit Type *</label>
                         <select id="permitType" required class="mt-1 block w-full rounded-md border-slate-300 shadow-sm">
-                            <option>General Work</option> <option>Hot Work</option> <option>Confined Space</option>
+                            <option value="General Work">General Work</option> <option value="Hot Work">Hot Work</option> <option value="Confined Space">Confined Space</option>
                         </select>
                     </div>
                     <div>
@@ -739,7 +767,7 @@ function setupCreatePermitFormLogic() {
     const lotoAssetsContainer = getEl('loto-assets-container');
     const addLotoAssetBtn = getEl('add-loto-asset-btn');
 
-    lotoToggle.querySelectorAll('.loto-btn').forEach(btn => {
+    lotoToggle.querySelectorAll('.loto-btn').forEach(btn => { // Corrected selector
         btn.addEventListener('click', () => {
             lotoToggle.querySelectorAll('.loto-btn').forEach(b => b.classList.remove('bg-sky-600', 'text-white'));
             btn.classList.add('bg-sky-600', 'text-white');
@@ -747,7 +775,7 @@ function setupCreatePermitFormLogic() {
             lotoAssetsSection.classList.toggle('hidden', !lotoApplicable);
         });
     });
-    lotoToggle.querySelector('[data-value="false"]').click();
+    lotoToggle.querySelector('[data-value="false"]').click(); // Initialize to "Not Applicable"
 
     const addLotoAssetRow = () => {
         const index = lotoAssetsContainer.children.length;
@@ -780,14 +808,14 @@ function setupCreatePermitFormLogic() {
     const form = getEl('create-permit-form');
     form.onsubmit = (e) => {
         e.preventDefault();
-        submitNewPermit('Pending Approval', lotoApplicable);
+        submitNewPermit('Pending Approval', lotoApplicable); // Pass lotoApplicable
     };
     getEl('save-draft-btn').onclick = () => {
-        submitNewPermit('Draft', lotoApplicable);
+        submitNewPermit('Draft', lotoApplicable); // Pass lotoApplicable
     };
 }
 
-function submitNewPermit(status, lotoApplicable) {
+function submitNewPermit(status, lotoApplicable) { // Added lotoApplicable parameter
     const lotoAssets = [];
     if (lotoApplicable) {
         getEl('loto-assets-container').querySelectorAll('.loto-asset-input').forEach(input => {
@@ -796,7 +824,7 @@ function submitNewPermit(status, lotoApplicable) {
             row.querySelectorAll('.loto-asset-input').forEach(i => {
                 asset[i.dataset.prop] = i.value;
             });
-            // Avoid duplicates
+            // Avoid duplicates (simple check based on assetId)
             if (!lotoAssets.some(a => a.assetId === asset.assetId)) {
                 lotoAssets.push(asset);
             }
@@ -812,8 +840,8 @@ function submitNewPermit(status, lotoApplicable) {
         contractor: getEl('contractor').value,
         startDate: `${getEl('startDate').value}T${getEl('startTime').value}`,
         endDate: `${getEl('endDate').value}T${getEl('endTime').value}`,
-        ewpTemplateId: 'TPL-HW-01', // Default for simplicity
-        approvalTemplateId: 'APP-STD-01', // Default for simplicity
+        ewpTemplateId: 'TPL-HW-01', // Default for simplicity, ideally selected by user
+        approvalTemplateId: 'APP-STD-01', // Default for simplicity, ideally selected by user
         coordinatorId: getEl('coordinator').value,
         status: status,
         loto: { required: lotoApplicable, assets: lotoAssets },
@@ -828,7 +856,6 @@ function submitNewPermit(status, lotoApplicable) {
 
     showModal(`<div class="p-6 text-center"><h3 class="text-lg font-semibold text-slate-900">Success</h3><p class="mt-2 text-sm text-slate-500">Permit ${newPermit.number} has been successfully ${status === 'Draft' ? 'saved as a draft' : 'submitted'}.</p><button onclick="hideModal(); navigate('dashboard');" class="mt-4 btn bg-sky-600 text-white px-6 py-2 rounded-md">OK</button></div>`);
 }
-
 
 // --- PERMIT DETAILS RENDERING ---
 function renderPermitDetails(permitId) {
@@ -845,7 +872,7 @@ function renderPermitDetails(permitId) {
             <!-- Permit Header -->
             <div class="p-6 border-b border-slate-200">
                 <div class="flex flex-col sm:flex-row justify-between items-start gap-4">
-                    <div>
+                    <div class="flex-grow">
                          <button onclick="navigate('dashboard')" class="flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-slate-800 mb-4 transition-colors">
                             <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
                             Back to Dashboard
@@ -882,26 +909,43 @@ function renderPermitDetails(permitId) {
     renderTabContent(permit);
 }
 
+// Helper to get user details
+const getUser = (userId) => MOCK_DB.users.find(u => u.id === userId);
+
 function renderPermitActions(permit) {
     const container = getEl('permit-actions-container');
     const currentUser = AppState.currentUser;
-    const isIssuer = currentUser.roles.includes('Issuer');
     let buttons = '';
 
-    const isPreWorkComplete = areChecklistsComplete(permit, 'pre') && areFieldsComplete(permit);
+    const isPreWorkComplete = areChecklistsComplete(permit, 'pre') && areFieldsComplete(permit); // Assuming areChecklistsComplete and areFieldsComplete are implemented
+    const isIssuer = currentUser.roles.includes('Issuer');
 
     if (permit.status === 'Approved' && isIssuer) {
         if (!isPreWorkComplete) {
             buttons += `<div class="text-xs text-amber-600 bg-amber-100 p-2 rounded-md">Pre-work checklists & fields must be completed to issue.</div>`;
+        } else {
+            buttons += `<button onclick="updatePermitStatus(${permit.id}, 'Issued')" class="btn bg-sky-600 text-white px-4 py-2 rounded-md font-medium hover:bg-sky-700 text-sm">Issue Permit</button>`;
         }
-        buttons += `<button onclick="updatePermitStatus(${permit.id}, 'Issued')" ${!isPreWorkComplete ? 'disabled' : ''} class="btn bg-sky-600 text-white px-4 py-2 rounded-md font-medium hover:bg-sky-700 text-sm disabled:bg-slate-300 disabled:cursor-not-allowed">Issue Permit</button>`;
     } else if (permit.status === 'Issued' && isIssuer) {
         buttons += `<button onclick="updatePermitStatus(${permit.id}, 'Active')" class="btn bg-green-600 text-white px-4 py-2 rounded-md font-medium hover:bg-green-700 text-sm">Start Work</button>`;
     } else if (permit.status === 'Active' && isIssuer) {
         buttons += `<button onclick="updatePermitStatus(${permit.id}, 'Work Stopped')" class="btn bg-amber-500 text-white px-4 py-2 rounded-md font-medium hover:bg-amber-600 text-sm">Stop Work</button>`;
+        buttons += `<button onclick="updatePermitStatus(${permit.id}, 'Closed')" class="btn bg-red-600 text-white px-4 py-2 rounded-md font-medium hover:bg-red-700 text-sm">Close Permit</button>`;
     } else if (permit.status === 'Work Stopped' && isIssuer) {
         buttons += `<button onclick="updatePermitStatus(${permit.id}, 'Active')" class="btn bg-green-600 text-white px-4 py-2 rounded-md font-medium hover:bg-green-700 text-sm">Resume Work</button>`;
+        buttons += `<button onclick="updatePermitStatus(${permit.id}, 'Closed')" class="btn bg-red-600 text-white px-4 py-2 rounded-md font-medium hover:bg-red-700 text-sm">Close Permit</button>`;
+    } else if (permit.status === 'Pending Approval') {
+        const approvalTemplate = MOCK_DB.approvalTemplates.find(t => t.id === permit.approvalTemplateId);
+        const currentAuths = MOCK_DB.authorizations[permit.id] || [];
+        const nextRoleIndex = currentAuths.length;
+        if (approvalTemplate && nextRoleIndex < approvalTemplate.roles.length) {
+            const nextRole = approvalTemplate.roles[nextRoleIndex];
+            if (currentUser.roles.includes(nextRole.name)) {
+                buttons += `<button onclick="signPermit(${permit.id}, '${nextRole.name}')" class="btn bg-sky-600 text-white px-4 py-2 rounded-md font-medium hover:bg-sky-700 text-sm">Approve</button>`;
+            }
+        }
     }
+    
     
     container.innerHTML = buttons;
 }
@@ -967,21 +1011,133 @@ function renderTabContent(permit) {
         case 'worker-details': renderWorkerDetailsContent(permit); break;
         case 'authorization': activeContentEl.innerHTML = renderAuthorizationContent(permit); break;
         case 'checklists': activeContentEl.innerHTML = renderChecklistsContent(permit); break;
-        case 'loto': if (permit.loto.required) { activeContentEl.innerHTML = `LOTO Content`; } break;
+        case 'loto': if (permit.loto.required) { activeContentEl.innerHTML = renderLotoContent(permit); } break;
     }
     activeContentEl.classList.add('active');
 }
 
+// --- TAB CONTENT RENDERING ---
 function renderBasicDetailsContent(permit) {
-    // ... same as previous version ...
+    return `
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+            <div>
+                <p class="text-sm font-medium text-slate-500">Permit Name</p>
+                <p class="mt-1 text-base font-semibold text-slate-800">${permit.name}</p>
+            </div>
+            <div>
+                <p class="text-sm font-medium text-slate-500">Permit Number</p>
+                <p class="mt-1 text-base font-semibold text-slate-800">${permit.number}</p>
+            </div>
+            <div>
+                <p class="text-sm font-medium text-slate-500">Permit Type</p>
+                <p class="mt-1 text-base text-slate-800">${permit.type}</p>
+            </div>
+            <div>
+                <p class="text-sm font-medium text-slate-500">Location</p>
+                <p class="mt-1 text-base text-slate-800">${permit.loc}</p>
+            </div>
+            <div>
+                <p class="text-sm font-medium text-slate-500">Contractor</p>
+                <p class="mt-1 text-base text-slate-800">${permit.contractor}</p>
+            </div>
+            <div>
+                <p class="text-sm font-medium text-slate-500">Permit Coordinator</p>
+                <p class="mt-1 text-base text-slate-800">${getUser(permit.coordinatorId)?.name || 'N/A'}</p>
+            </div>
+            <div>
+                <p class="text-sm font-medium text-slate-500">Start Date & Time</p>
+                <p class="mt-1 text-base text-slate-800">${new Date(permit.startDate).toLocaleString()}</p>
+            </div>
+            <div>
+                <p class="text-sm font-medium text-slate-500">End Date & Time</p>
+                <p class="mt-1 text-base text-slate-800">${new Date(permit.endDate).toLocaleString()}</p>
+            </div>
+            <div class="md:col-span-2">
+                <p class="text-sm font-medium text-slate-500">Description</p>
+                <p class="mt-1 text-base text-slate-800">${permit.description || 'N/A'}</p>
+            </div>
+        </div>
+    `;
 }
 
 function renderPermitFieldsContent(permit) {
-    // ... same as previous version ...
+    const template = MOCK_DB.ewpTemplates.find(t => t.id === permit.ewpTemplateId);
+    if (!template || template.fields.length === 0) {
+        return `<div class="text-center py-12 bg-slate-50 rounded-lg border border-dashed"><p class="text-slate-500">No custom fields defined for this permit type.</p></div>`;
+    }
+
+    const isEditable = ['Draft', 'Pending Approval'].includes(permit.status);
+
+    return `
+        <div class="space-y-6">
+            ${template.fields.map(field => {
+                const value = permit.data[field.id];
+                let inputField = '';
+
+                if (isEditable) {
+                    switch (field.type) {
+                        case 'Text Input':
+                            inputField = `<input type="text" id="field-${field.id}" value="${value || ''}" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm text-sm">`;
+                            break;
+                        case 'Text Area':
+                            inputField = `<textarea id="field-${field.id}" rows="3" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm text-sm">${value || ''}</textarea>`;
+                            break;
+                        case 'Boolean':
+                            inputField = `<select id="field-${field.id}" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm text-sm">
+                                <option value="" ${value === undefined ? 'selected' : ''}>Select...</option>
+                                <option value="true" ${value === true || value === 'Yes' ? 'selected' : ''}>Yes</option>
+                                <option value="false" ${value === false || value === 'No' ? 'selected' : ''}>No</option>
+                            </select>`;
+                            break;
+                        case 'Dropdown':
+                            inputField = `<select id="field-${field.id}" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm text-sm">
+                                <option value="">Select...</option>
+                                ${field.options.map(opt => `<option value="${opt}" ${value === opt ? 'selected' : ''}>${opt}</option>`).join('')}
+                            </select>`;
+                            break;
+                        case 'Decimal':
+                        case 'Number':
+                             inputField = `<input type="number" id="field-${field.id}" value="${value || ''}" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm text-sm">`;
+                            break;
+                        default:
+                            inputField = `<input type="text" id="field-${field.id}" value="${value || ''}" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm text-sm">`;
+                    }
+                }
+
+                return `
+                    <div>
+                        <label for="field-${field.id}" class="block text-sm font-medium text-slate-700">${field.name} ${field.required ? '<span class="text-red-500">*</span>' : ''}</label>
+                        ${isEditable ? inputField : `<p class="mt-1 text-base text-slate-800">${value !== undefined && value !== null ? String(value) : 'N/A'}</p>`}
+                    </div>
+                `;
+            }).join('')}
+        </div>
+        ${isEditable ? `
+            <div class="mt-8 pt-6 border-t flex justify-end">
+                <button onclick="savePermitFields(${permit.id})" class="btn bg-sky-600 text-white px-6 py-2 rounded-md font-semibold text-sm">Save Changes</button>
+            </div>
+        ` : ''}
+    `;
 }
 
 function renderWorkerDetailsContent(permit) {
-    // ... same as previous version ...
+    const container = getEl('worker-details-tab');
+    const workers = MOCK_DB.workers[permit.id] || [];
+    
+    const tableHtml = workers.length > 0 ? `
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-slate-200">
+                <thead class="bg-slate-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Name</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Task</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Contact</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-slate-200">
+                    ${workers.map(w => `
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">${w.name}
 }
 
 function renderAuthorizationContent(permit) {
