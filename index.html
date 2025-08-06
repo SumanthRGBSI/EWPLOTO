@@ -468,61 +468,60 @@ function renderEwpTemplateForm(templateId = null) {
         }).join('');
     };
 
-    const attachFieldListeners = () => {
-        fieldsContainer.addEventListener('change', (e) => {
-            if (e.target.matches('input, select')) {
-                const index = e.target.dataset.index;
-                const prop = e.target.dataset.prop;
-                if (index === undefined || prop === undefined) return;
+    // Use event delegation: attach listeners ONCE to the container.
+    // This prevents memory leaks and bugs from multiple identical listeners.
+    fieldsContainer.addEventListener('change', (e) => {
+        if (e.target.matches('input[data-prop], select[data-prop]')) {
+            const index = e.target.dataset.index;
+            const prop = e.target.dataset.prop;
+            if (index === undefined || prop === undefined) return;
 
-                const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
-                template.fields[index][prop] = value;
-                
-                if (prop === 'type') {
-                    if(value !== 'Dropdown') {
-                        template.fields[index].options = [];
-                    }
-                    renderFields();
-                    attachFieldListeners();
+            const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+            template.fields[index][prop] = value;
+            
+            if (prop === 'type') {
+                if(value !== 'Dropdown') {
+                    template.fields[index].options = [];
                 }
+                renderFields(); // Just re-render, no need to re-attach listeners
             }
-        });
+        }
+    });
 
-        fieldsContainer.addEventListener('click', (e) => {
-            if (e.target.closest('.remove-field-btn')) {
-                template.fields.splice(e.target.closest('.remove-field-btn').dataset.index, 1);
-                renderFields();
-                attachFieldListeners();
-            }
-            if (e.target.closest('.add-option-btn')) {
-                const index = e.target.closest('.add-option-btn').dataset.index;
-                const newOptionInput = getEl(`field-${index}-new-option`);
-                if (newOptionInput.value.trim()) {
-                    if (!template.fields[index].options) {
-                        template.fields[index].options = [];
-                    }
-                    template.fields[index].options.push(newOptionInput.value.trim());
-                    newOptionInput.value = '';
-                    renderFields();
-                    attachFieldListeners();
-                }
-            }
-            if (e.target.closest('.remove-option-btn')) {
-                const { index, optIndex } = e.target.closest('.remove-option-btn').dataset;
-                template.fields[index].options.splice(optIndex, 1);
-                renderFields();
-                attachFieldListeners();
-            }
-        });
-    };
+    fieldsContainer.addEventListener('click', (e) => {
+        const removeFieldBtn = e.target.closest('.remove-field-btn');
+        if (removeFieldBtn) {
+            template.fields.splice(removeFieldBtn.dataset.index, 1);
+            renderFields();
+            return;
+        }
 
-    renderFields();
-    attachFieldListeners();
+        const addOptionBtn = e.target.closest('.add-option-btn');
+        if (addOptionBtn) {
+            const index = addOptionBtn.dataset.index;
+            const newOptionInput = getEl(`field-${index}-new-option`);
+            if (newOptionInput && newOptionInput.value.trim()) {
+                if (!template.fields[index].options) template.fields[index].options = [];
+                template.fields[index].options.push(newOptionInput.value.trim());
+                newOptionInput.value = '';
+                renderFields();
+            }
+            return;
+        }
+
+        const removeOptionBtn = e.target.closest('.remove-option-btn');
+        if (removeOptionBtn) {
+            const { index, optIndex } = removeOptionBtn.dataset;
+            template.fields[index].options.splice(optIndex, 1);
+            renderFields();
+        }
+    });
+
+    renderFields(); // Initial render
 
     getEl('add-custom-field-btn').onclick = () => {
         template.fields.push({ id: `f-${Date.now()}`, name: '', type: 'String', required: false, options: [] });
-        renderFields();
-        attachFieldListeners();
+        renderFields(); // Just re-render
     };
 
     getEl('ewp-template-form').onsubmit = (e) => {
