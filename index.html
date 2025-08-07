@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" class="h-full bg-slate-100">
-<head> 
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EHS - Electronic Work Permit System</title>
@@ -33,7 +33,7 @@
         .tab-content { display: none; }
         .tab-content.active { display: block; }
 
-        /* Status Stepper Styles from new design */
+        /* Status Stepper Styles */
         .status-step .step-icon {
             transition: all 0.3s ease;
         }
@@ -42,7 +42,7 @@
             border-color: var(--c-success);
             color: white;
         }
-         .status-step.rejected .step-icon {
+        .status-step.rejected .step-icon {
             background-color: var(--c-danger);
             border-color: var(--c-danger);
             color: white;
@@ -63,6 +63,26 @@
         #modal-overlay.active { opacity: 1; pointer-events: auto; }
         #modal-content.active { transform: scale(1) translateY(0); }
         #modal-content { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); transform: scale(0.95) translateY(20px); max-height: 90vh; overflow-y: auto; }
+
+        /* Toast Notification */
+        #toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #2d3748;
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+            z-index: 100;
+        }
+        #toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
     </style>
 </head>
 <body class="text-slate-800">
@@ -121,6 +141,9 @@
                 <!-- Modal content is dynamically injected -->
             </div>
         </div>
+        
+        <!-- Toast Notification -->
+        <div id="toast"></div>
     </div>
 
 <script src="https://code.jquery.com/qunit/qunit-2.20.1.js"></script>
@@ -147,7 +170,7 @@ const MOCK_DB = {
         {
             id: 'TPL-CSE-01', name: 'Confined Space Entry', description: 'Template for entering tanks, vessels, or pits.',
             fields: [
-                { id: 'f4', name: 'Rescue Plan Attached', type: 'Boolean', required: true, options: [] },
+                { id: 'f4', name: 'Rescue Plan Attached', type: 'Boolean', required: true, options: ['Yes', 'No'] },
                 { id: 'f5', name: 'Atmospheric Test Results', type: 'Text Area', required: true, options: [] },
                 { id: 'f6', name: 'Entry Date', type: 'DateTime', required: true, options: [] },
             ],
@@ -175,12 +198,12 @@ const MOCK_DB = {
             ]
         }
     ],
-    permits: [ // Added a 'Draft' permit for testing
-        { id: 1, number: 'PTW-2025-001', name: 'Weld support bracket on Pipe Rack R-11', loc: 'Area 5 - Processing Unit', status: 'Pending Approval', type: 'Hot Work', loto: { required: false, assets: [] }, contractor: 'WeldPro Inc.', coordinatorId: 'sjones', ewpTemplateId: 'TPL-HW-01', approvalTemplateId: 'APP-STD-01', startDate: '2025-08-06T09:00', endDate: '2025-08-06T17:00', data: {f1: 'Yes', f2: 0.5, f3: 'CO2'}, checklists: { pre: { 'Confirm fire extinguisher is present and inspected.': true, 'Verify combustible materials are removed.': true, 'Test gas detector.': false }, post: {} } },
-        { id: 2, number: 'PTW-2025-002', name: 'Confined Space Entry - Tank T-101', loc: 'Area 2', status: 'Issued', type: 'Confined Space', loto: { required: true, assets: [{procedure: 'PROC-001', assetName: 'Breaker PNL-B-03', assetId: 'EQ-1023'}] }, contractor: 'SafeSpace LLC', coordinatorId: 'sjones', ewpTemplateId: 'TPL-CSE-01', approvalTemplateId: 'APP-LOTO-01', startDate: '2025-08-07T08:30', endDate: '2025-08-07T12:30', data: {f4: true, f5: 'O2: 20.9%, LEL: 0%', f6: '2025-08-07T08:00'}, checklists: { pre: { 'Verify air monitoring is calibrated.': true, 'Confirm rescue team is on standby.', 'Isolate all energy sources (LOTO).': true }, post: {} } },
+    permits: [
+        { id: 1, number: 'PTW-2025-001', name: 'Weld support bracket on Pipe Rack R-11', loc: 'Area 5 - Processing Unit', status: 'Pending Approval', type: 'Hot Work', loto: { required: false, assets: [] }, contractor: 'WeldPro Inc.', coordinatorId: 'sjones', ewpTemplateId: 'TPL-HW-01', approvalTemplateId: 'APP-STD-01', startDate: '2025-08-06T09:00', endDate: '2025-08-06T17:00', data: {f1: true, f2: 0.5, f3: 'CO2'}, checklists: { pre: { 'Confirm fire extinguisher is present and inspected.': true, 'Verify combustible materials are removed.': true, 'Test gas detector.': false }, post: {} } },
+        { id: 2, number: 'PTW-2025-002', name: 'Confined Space Entry - Tank T-101', loc: 'Area 2', status: 'Issued', type: 'Confined Space', loto: { required: true, assets: [{procedure: 'PROC-001', assetName: 'Breaker PNL-B-03', assetId: 'EQ-1023', status: 'Locked'}] }, contractor: 'SafeSpace LLC', coordinatorId: 'sjones', ewpTemplateId: 'TPL-CSE-01', approvalTemplateId: 'APP-LOTO-01', startDate: '2025-08-07T08:30', endDate: '2025-08-07T12:30', data: {f4: true, f5: 'O2: 20.9%, LEL: 0%', f6: '2025-08-07T08:00'}, checklists: { pre: { 'Verify air monitoring is calibrated.': true, 'Confirm rescue team is on standby.': true, 'Isolate all energy sources (LOTO).': true }, post: {} } },
         { id: 3, number: 'PTW-2025-003', name: 'Routine HVAC Maintenance', loc: 'Building A Rooftop', status: 'Draft', type: 'General Work', loto: { required: false, assets: [] }, contractor: 'CoolAir Services', coordinatorId: 'sjones', ewpTemplateId: 'TPL-HW-01', approvalTemplateId: 'APP-STD-01', startDate: '2025-08-08T09:00', endDate: '2025-08-08T13:00', data: {}, checklists: { pre: {}, post: {} } },
-        { id: 4, number: 'PTW-2025-004', name: 'Pump P-502 Motor Replacement', loc: 'Pump House 1', status: 'Active', type: 'Mechanical', loto: { required: true, assets: [{procedure: 'PROC-002', assetName: 'Breaker PNL-B-03', assetId: 'EQ-1023'}, {procedure: 'PROC-003', assetName: 'Inlet Valve V-502', assetId: 'V-502'}] }, contractor: 'MechServe', coordinatorId: 'sjones', ewpTemplateId: 'TPL-HW-01', approvalTemplateId: 'APP-LOTO-01', startDate: '2025-08-05T10:00', endDate: '2025-08-05T18:00', data: {f1: 'No', f2: 0.0, f3: 'Dry Powder'}, checklists: { pre: { 'Confirm fire extinguisher is present and inspected.': true, 'Verify combustible materials are removed.': true, 'Test gas detector.': true }, post: {} } },
-        { id: 5, number: 'PTW-2025-005', name: 'Electrical Maintenance on Panel P-04', loc: 'Control Room', status: 'Closed', type: 'Electrical', loto: { required: false, assets: [] }, contractor: 'SparkSafe', coordinatorId: 'sjones', ewpTemplateId: 'TPL-HW-01', approvalTemplateId: 'APP-STD-01', startDate: '2025-08-04T13:00', endDate: '2025-08-04T15:00', data: {f1: 'No', f2: 0.0, f3: 'CO2'}, checklists: { pre: { 'Confirm fire extinguisher is present and inspected.': true, 'Verify combustible materials are removed.': true, 'Test gas detector.': true }, post: { 'Monitor area for 30 minutes post-work.': true, 'Ensure all equipment is off.': true, 'Clean up work area.': true } } }
+        { id: 4, number: 'PTW-2025-004', name: 'Pump P-502 Motor Replacement', loc: 'Pump House 1', status: 'Active', type: 'Mechanical', loto: { required: true, assets: [{procedure: 'PROC-002', assetName: 'Breaker PNL-B-03', assetId: 'EQ-1023', status: 'Locked'}, {procedure: 'PROC-003', assetName: 'Inlet Valve V-502', assetId: 'V-502', status: 'Locked'}] }, contractor: 'MechServe', coordinatorId: 'sjones', ewpTemplateId: 'TPL-HW-01', approvalTemplateId: 'APP-LOTO-01', startDate: '2025-08-05T10:00', endDate: '2025-08-05T18:00', data: {f1: false, f2: 0.0, f3: 'Dry Powder'}, checklists: { pre: { 'Confirm fire extinguisher is present and inspected.': true, 'Verify combustible materials are removed.': true, 'Test gas detector.': true }, post: {} } },
+        { id: 5, number: 'PTW-2025-005', name: 'Electrical Maintenance on Panel P-04', loc: 'Control Room', status: 'Closed', type: 'Electrical', loto: { required: false, assets: [] }, contractor: 'SparkSafe', coordinatorId: 'sjones', ewpTemplateId: 'TPL-HW-01', approvalTemplateId: 'APP-STD-01', startDate: '2025-08-04T13:00', endDate: '2025-08-04T15:00', data: {f1: false, f2: 0.0, f3: 'CO2'}, checklists: { pre: { 'Confirm fire extinguisher is present and inspected.': true, 'Verify combustible materials are removed.': true, 'Test gas detector.': true }, post: { 'Monitor area for 30 minutes post-work.': true, 'Ensure all equipment is off.': true, 'Clean up work area.': true } } }
     ],
     authorizations: {
         1: [ { role: 'Requestor', userId: 'sjones', date: '2025-08-05 09:15:22', status: 'Approved', reason: '' } ],
@@ -191,6 +214,16 @@ const MOCK_DB = {
     workers: {
         4: [ { id: 'W-8439', name: 'Alice Williams', task: 'Mechanical Fitting', contact: '555-0101' }, { id: 'W-8440', name: 'Bob Brown', task: 'Electrical Support', contact: '555-0102' } ],
         2: [ { id: 'W-9100', name: 'Eve Foreman', task: 'Entry Supervisor', contact: '555-0105' }]
+    },
+    gasTests: {
+        2: [
+            { date: '2025-08-07T08:15', o2: 20.9, lel: 0, h2s: 0, co: 5, tester: 'pchen' },
+            { date: '2025-08-07T10:15', o2: 20.8, lel: 0, h2s: 0, co: 5, tester: 'pchen' }
+        ]
+    },
+    riskAssessments: {
+        1: { likelihood: 3, severity: 4, score: 12, description: "Sparks from welding could ignite nearby flammable materials if not properly shielded. Fire watch is essential." },
+        2: { likelihood: 2, severity: 5, score: 10, description: "Potential for atmospheric hazards (oxygen deficiency) and engulfment. Continuous monitoring and rescue plan are critical." }
     }
 };
 
@@ -259,6 +292,15 @@ function hideModal() {
     modalContent.classList.remove('active');
 }
 
+function showToast(message) {
+    const toast = getEl('toast');
+    toast.textContent = message;
+    toast.classList.add('show');
+    setTimeout(() => {
+        toast.classList.remove('show');
+    }, 3000);
+}
+
 function showConfirmation(title, message, onConfirm) {
     const content = `
         <div class="p-6 text-center">
@@ -283,16 +325,15 @@ function showConfirmation(title, message, onConfirm) {
 function renderDashboard() {
     const view = Views.dashboard;
     const permits = MOCK_DB.permits;
-    const statusColors = {
-        'Active': 'bg-green-100 text-green-800',
-        'Issued': 'bg-sky-100 text-sky-800',
-        'Work Stopped': 'bg-amber-100 text-amber-800',
-        'LOTO In Progress': 'bg-blue-100 text-blue-800',
-        'Draft': 'bg-slate-200 text-slate-700',
-        'Pending Approval': 'bg-yellow-100 text-yellow-800',
-        'Approved': 'bg-indigo-100 text-indigo-800',
-        'Rejected': 'bg-red-100 text-red-800',
-        'Closed': 'bg-slate-100 text-slate-800',
+    const statusStyles = {
+        'Active': { text: 'text-green-800', bg: 'bg-green-100', border: 'border-green-500' },
+        'Issued': { text: 'text-sky-800', bg: 'bg-sky-100', border: 'border-sky-500' },
+        'Work Stopped': { text: 'text-amber-800', bg: 'bg-amber-100', border: 'border-amber-500' },
+        'Draft': { text: 'text-slate-700', bg: 'bg-slate-200', border: 'border-slate-400' },
+        'Pending Approval': { text: 'text-yellow-800', bg: 'bg-yellow-100', border: 'border-yellow-500' },
+        'Approved': { text: 'text-indigo-800', bg: 'bg-indigo-100', border: 'border-indigo-500' },
+        'Rejected': { text: 'text-red-800', bg: 'bg-red-100', border: 'border-red-500' },
+        'Closed': { text: 'text-slate-800', bg: 'bg-slate-100', border: 'border-slate-300' },
     };
 
     view.innerHTML = `
@@ -304,11 +345,13 @@ function renderDashboard() {
             </button>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            ${permits.map(p => `
-                <div class="bg-white rounded-xl shadow-md border border-slate-200/80 p-5 flex flex-col justify-between hover:shadow-lg hover:border-slate-300 transition-all">
+            ${permits.map(p => {
+                const styles = statusStyles[p.status] || statusStyles['Draft'];
+                return `
+                <div class="bg-white rounded-xl shadow-md border-l-4 ${styles.border} p-5 flex flex-col justify-between hover:shadow-lg transition-all">
                     <div>
                         <div class="flex justify-between items-start">
-                             <span class="px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[p.status] || 'bg-slate-100 text-slate-800'}">${p.status}</span>
+                             <span class="px-2.5 py-0.5 rounded-full text-xs font-medium ${styles.bg} ${styles.text}">${p.status}</span>
                              <span class="text-sm font-semibold text-sky-700">${p.number}</span>
                         </div>
                         <h3 class="font-bold text-slate-800 mt-3 text-lg">${p.name}</h3>
@@ -330,7 +373,7 @@ function renderDashboard() {
                          <button onclick="navigate('permit-details', ${p.id})" class="btn bg-white border border-slate-300 text-slate-700 px-4 py-1.5 rounded-md font-medium hover:bg-slate-100 text-sm">View Details</button>
                     </div>
                 </div>
-            `).join('')}
+            `}).join('')}
         </div>
     `;
 }
@@ -434,28 +477,34 @@ function renderApprovalTemplatesList() {
 function renderEwpTemplateForm(templateId = null) {
     const isEditing = templateId !== null;
     const template = isEditing ? JSON.parse(JSON.stringify(MOCK_DB.ewpTemplates.find(t => t.id === templateId))) : { id: `TPL-EWP-${Date.now()}`, name: '', description: '', fields: [], preWorkChecklist: [], postWorkChecklist: [] };
-    const fieldTypes = ['Text Input', 'Text Area', 'Number', 'Decimal', 'Date', 'Time', 'Date & Time', 'Boolean', 'Dropdown'];
+    const fieldTypes = ['Text Input', 'Text Area', 'Number', 'Decimal', 'Date', 'Time', 'DateTime', 'Boolean', 'Dropdown'];
 
     const formHtml = `
         <form id="ewp-template-form" class="p-8 space-y-6 max-h-[90vh] overflow-y-auto">
             <h3 class="text-xl font-bold text-slate-900">${isEditing ? 'Edit' : 'Create'} EWP Template</h3>
-            <div>
-                <label for="tplName" class="block text-sm font-medium text-slate-700">Template Name</label>
-                <input type="text" id="tplName" required class="mt-1 block w-full rounded-md border-slate-300" value="${template.name}">
-            </div>
-            <div>
-                <label for="tplDesc" class="block text-sm font-medium text-slate-700">Description</label>
-                <textarea id="tplDesc" rows="2" class="mt-1 block w-full rounded-md border-slate-300">${template.description}</textarea>
-            </div>
             
-            <div>
-                <h4 class="text-md font-semibold text-slate-800">Custom Fields</h4>
-                <div id="custom-fields-container" class="mt-2 space-y-3"></div>
+            <fieldset class="border p-4 rounded-lg">
+                <legend class="text-lg font-semibold px-2 text-slate-700">Basic Information</legend>
+                <div class="space-y-4 p-2">
+                    <div>
+                        <label for="tplName" class="block text-sm font-medium text-slate-700">Template Name</label>
+                        <input type="text" id="tplName" required class="mt-1 block w-full rounded-md border-slate-300" value="${template.name}">
+                    </div>
+                    <div>
+                        <label for="tplDesc" class="block text-sm font-medium text-slate-700">Description</label>
+                        <textarea id="tplDesc" rows="2" class="mt-1 block w-full rounded-md border-slate-300">${template.description}</textarea>
+                    </div>
+                </div>
+            </fieldset>
+            
+            <fieldset class="border p-4 rounded-lg">
+                <legend class="text-lg font-semibold px-2 text-slate-700">Custom Fields</legend>
+                <div id="custom-fields-container" class="mt-2 space-y-3 p-2"></div>
                 <button type="button" id="add-custom-field-btn" class="mt-2 btn text-sm text-sky-600 font-semibold hover:text-sky-800 flex items-center gap-1">
                     <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" /></svg>
                     Add Field
                 </button>
-            </div>
+            </fieldset>
 
             <div class="flex justify-end gap-4 pt-6 border-t">
                 <button type="button" onclick="hideModal()" class="btn bg-white border border-slate-300 text-slate-700 px-6 py-2 rounded-md font-medium text-sm">Cancel</button>
@@ -497,7 +546,7 @@ function renderEwpTemplateForm(templateId = null) {
                     <div class="flex items-start gap-2">
                         <input type="text" class="flex-grow rounded-md border-slate-300 text-sm" value="${field.name}" placeholder="Field Name" data-index="${index}" data-prop="name">
                         <select class="rounded-md border-slate-300 text-sm" data-index="${index}" data-prop="type">
-                            ${fieldTypes.map(t => `<option value="${t}" ${field.type === t ? 'selected' : ''}>${t}</option>`).join('')}
+                            ${fieldTypes.map(t => `<option value="${t.replace(/\s/g, '')}" ${field.type === t.replace(/\s/g, '') ? 'selected' : ''}>${t}</option>`).join('')}
                         </select>
                         <label class="flex items-center text-sm gap-1.5 whitespace-nowrap pt-2"><input type="checkbox" class="rounded" ${field.required ? 'checked' : ''} data-index="${index}" data-prop="required"> Required</label>
                         <button type="button" data-index="${index}" class="remove-field-btn p-2 text-slate-400 hover:text-red-500 mt-1"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" /></svg></button>
@@ -564,7 +613,7 @@ function renderEwpTemplateForm(templateId = null) {
     attachFieldListeners();
 
     getEl('add-custom-field-btn').onclick = () => {
-        template.fields.push({ id: `f-${Date.now()}`, name: '', type: 'Text Input', required: false, options: [] });
+        template.fields.push({ id: `f-${Date.now()}`, name: '', type: 'TextInput', required: false, options: [] });
         renderFields();
         attachFieldListeners();
     };
@@ -755,7 +804,7 @@ function renderCreatePermitForm() {
                         <div id="loto-assets-container"></div>
                         <button type="button" id="add-loto-asset-btn" class="btn text-sm text-sky-600 font-semibold hover:text-sky-800 flex items-center gap-1">
                              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" /></svg>
-                            Add Asset
+                             Add Asset
                         </button>
                     </div>
                 </div>
@@ -825,13 +874,20 @@ function submitNewPermit(status, lotoApplicable) {
             const assetName = row.querySelector('[data-prop=assetName]').value.trim();
             const assetId = row.querySelector('[data-prop=assetId]').value.trim();
             if (assetName && assetId) {
-                lotoAssets.push({ assetName, assetId });
+                lotoAssets.push({ assetName, assetId, status: 'Isolation Pending' });
             }
         });
     }
 
     const ewpTemplateId = getEl('ewpTemplateId').value;
     const ewpTemplate = MOCK_DB.ewpTemplates.find(t => t.id === ewpTemplateId);
+    
+    // **FIX**: Initialize checklists based on the template
+    const checklists = { pre: {}, post: {} };
+    if (ewpTemplate) {
+        ewpTemplate.preWorkChecklist.forEach(item => checklists.pre[item] = false);
+        ewpTemplate.postWorkChecklist.forEach(item => checklists.post[item] = false);
+    }
 
     const newPermit = {
         id: MOCK_DB.permits.length + 1,
@@ -848,7 +904,7 @@ function submitNewPermit(status, lotoApplicable) {
         type: ewpTemplate ? ewpTemplate.name : 'General Work',
         loto: { required: lotoApplicable, assets: lotoAssets },
         data: {},
-        checklists: { pre: {}, post: {} }
+        checklists: checklists
     };
 
     MOCK_DB.permits.unshift(newPermit);
@@ -856,7 +912,7 @@ function submitNewPermit(status, lotoApplicable) {
         MOCK_DB.authorizations[newPermit.id] = [{ 
             role: 'Requestor', 
             userId: AppState.currentUser.id, 
-            date: new Date().toISOString().replace('T', ' ',).substring(0, 19),
+            date: new Date().toISOString().replace('T', ' ').substring(0, 19),
             status: 'Approved' 
         }];
     }
@@ -970,32 +1026,26 @@ function renderStatusStepper(permit) {
     
     let currentStatusIndex = statuses.indexOf(permit.status);
     let isRejected = permit.status === 'Rejected';
+    // **FIX**: If rejected, the visual step should be 'Pending Approval'
+    let rejectedStepIndex = statuses.indexOf('Pending Approval');
 
-    if (isRejected) {
-        // Find where in the chain it was rejected
-        const auths = MOCK_DB.authorizations[permit.id] || [];
-        const rejectionStep = auths.find(a => a.status === 'Rejected');
-        if (rejectionStep) {
-            const template = MOCK_DB.approvalTemplates.find(t => t.id === permit.approvalTemplateId);
-            const rejectedRoleIndex = template.roles.findIndex(r => r.name === rejectionStep.role);
-            currentStatusIndex = rejectedRoleIndex + 1; // +1 because Draft is at index 0
-        }
-    }
-    
     container.innerHTML = `
         <div class="flex items-center">
             ${statuses.map((status, index) => {
                 let stateClass = '';
-                let icon = index;
-                if (isRejected && index === currentStatusIndex) {
+                let icon = `&#${index + 1};`;
+                if (isRejected && index === rejectedStepIndex) {
                     stateClass = 'rejected';
                     icon = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>`;
-                } else if (index < currentStatusIndex) {
+                } else if (isRejected && index < rejectedStepIndex) {
                     stateClass = 'completed';
                     icon = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>`;
-                } else if (index === currentStatusIndex) {
+                } else if (!isRejected && index < currentStatusIndex) {
+                    stateClass = 'completed';
+                    icon = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>`;
+                } else if (!isRejected && index === currentStatusIndex) {
                     stateClass = 'active';
-                    icon = index;
+                    icon = `&#${index + 1};`;
                 }
 
                 return `
@@ -1048,8 +1098,8 @@ function renderTabContent(permit) {
         case 'worker-details': renderWorkerDetailsContent(permit); break;
         case 'authorization': activeContentEl.innerHTML = renderAuthorizationContent(permit); break;
         case 'checklists': activeContentEl.innerHTML = renderChecklistsContent(permit); break;
-        case 'loto': if (permit.loto.required) { activeContentEl.innerHTML = renderLotoContent(permit); } break;
-        case 'gas-tests': activeContentEl.innerHTML = renderGasTestsContent(permit); break;
+        case 'loto': if (permit.loto.required) { renderLotoContent(permit); } break;
+        case 'gas-tests': renderGasTestsContent(permit); break;
         case 'risk-assessment': activeContentEl.innerHTML = renderRiskAssessmentContent(permit); break;
     }
     activeContentEl.classList.add('active');
@@ -1111,7 +1161,7 @@ function renderPermitFieldsContent(permit) {
         return `<div class="text-center py-12 bg-slate-50 rounded-lg border border-dashed"><p class="text-slate-500">No custom fields defined for this permit type.</p></div>`;
     }
 
-    const isEditable = ['Draft', 'Pending Approval'].includes(permit.status);
+    const isEditable = ['Draft', 'Pending Approval', 'Approved'].includes(permit.status);
 
     return `
         <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
@@ -1121,17 +1171,17 @@ function renderPermitFieldsContent(permit) {
 
                 if (isEditable) {
                     switch (field.type) {
-                        case 'Text Input':
+                        case 'TextInput':
                             inputField = `<input type="text" id="field-${field.id}" value="${value || ''}" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm text-sm">`;
                             break;
-                        case 'Text Area':
+                        case 'TextArea':
                             inputField = `<textarea id="field-${field.id}" rows="3" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm text-sm">${value || ''}</textarea>`;
                             break;
                         case 'Boolean':
                             inputField = `<select id="field-${field.id}" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm text-sm">
                                 <option value="" ${value === undefined ? 'selected' : ''}>Select...</option>
-                                <option value="true" ${value === true || value === 'Yes' ? 'selected' : ''}>Yes</option>
-                                <option value="false" ${value === false || value === 'No' ? 'selected' : ''}>No</option>
+                                <option value="true" ${value === true ? 'selected' : ''}>Yes</option>
+                                <option value="false" ${value === false ? 'selected' : ''}>No</option>
                             </select>`;
                             break;
                         case 'Dropdown':
@@ -1281,7 +1331,7 @@ function signPermit(permitId, roleName) {
     MOCK_DB.authorizations[permitId].push({
         role: roleName,
         userId: AppState.currentUser.id,
-        date: new Date().toISOString().replace('T', ' ',).substring(0, 19),
+        date: new Date().toISOString().replace('T', ' ').substring(0, 19),
         status: 'Approved'
     });
 
@@ -1303,6 +1353,7 @@ function showRejectionModal(permitId, roleName) {
             <div class="mt-4">
                 <label for="rejectionReason" class="block text-sm font-medium text-slate-700">Rejection Reason</label>
                 <textarea id="rejectionReason" rows="3" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm"></textarea>
+                <p id="rejection-error" class="text-red-500 text-sm mt-1 hidden">Rejection reason is required.</p>
             </div>
             <div class="mt-6 flex justify-end gap-4">
                 <button type="button" onclick="hideModal()" class="btn bg-white border border-slate-300 text-slate-700 px-6 py-2 rounded-md font-medium text-sm">Cancel</button>
@@ -1312,9 +1363,11 @@ function showRejectionModal(permitId, roleName) {
     `;
     showModal(content);
     getEl('confirm-rejection-btn').onclick = () => {
-        const reason = getEl('rejectionReason').value.trim();
+        const reasonInput = getEl('rejectionReason');
+        const reason = reasonInput.value.trim();
         if (!reason) {
-            alert('Rejection reason is required.');
+            reasonInput.classList.add('border-red-500');
+            getEl('rejection-error').classList.remove('hidden');
             return;
         }
         rejectPermit(permitId, roleName, reason);
@@ -1333,7 +1386,7 @@ function rejectPermit(permitId, roleName, reason) {
     MOCK_DB.authorizations[permitId].push({
         role: roleName,
         userId: AppState.currentUser.id,
-        date: new Date().toISOString().replace('T', ' ',).substring(0, 19),
+        date: new Date().toISOString().replace('T', ' ').substring(0, 19),
         status: 'Rejected',
         reason: reason
     });
@@ -1347,7 +1400,7 @@ function renderChecklistsContent(permit) {
     const template = MOCK_DB.ewpTemplates.find(t => t.id === permit.ewpTemplateId);
     if (!template) return `<p>No template found for this permit.</p>`;
 
-    const isEditable = ['Issued', 'Active', 'Work Stopped'].includes(permit.status);
+    const isEditable = ['Approved', 'Issued', 'Active', 'Work Stopped'].includes(permit.status);
 
     const renderList = (title, items, type) => {
         if (!items || items.length === 0) return '';
@@ -1361,7 +1414,7 @@ function renderChecklistsContent(permit) {
                                    class="h-5 w-5 rounded border-slate-300 text-sky-600 focus:ring-sky-500 disabled:bg-slate-200" 
                                    ${permit.checklists[type][item] ? 'checked' : ''}
                                    ${!isEditable ? 'disabled' : ''}
-                                   onchange="updateChecklistItem(${permit.id}, '${type}', '${item.replace(/'/g, "\'")}', this.checked)">
+                                   onchange="updateChecklistItem(${permit.id}, '${type}', ${JSON.stringify(item)}, this.checked)">
                             <label for="chk-${type}-${item.replace(/\s/g, '')}" class="ml-3 text-sm text-slate-700">${item}</label>
                         </li>
                     `).join('')}
@@ -1379,7 +1432,11 @@ function renderChecklistsContent(permit) {
 }
 
 function renderLotoContent(permit) {
+    const container = getEl('loto-tab');
     const assets = permit.loto.assets || [];
+    const canManageLoto = AppState.currentUser.roles.includes('LOTO Reviewer') || AppState.currentUser.roles.includes('Issuer');
+    const isEditable = ['Approved', 'Issued', 'Active', 'Work Stopped'].includes(permit.status) && canManageLoto;
+
     const tableHtml = assets.length > 0 ? `
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-slate-200">
@@ -1388,37 +1445,181 @@ function renderLotoContent(permit) {
                         <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Asset Name</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Asset ID</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-slate-200">
-                    ${assets.map(a => `
+                    ${assets.map((a, index) => {
+                        let statusBadge = '';
+                        let actionButton = '';
+                        switch(a.status) {
+                            case 'Isolation Pending':
+                                statusBadge = `<span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Pending</span>`;
+                                actionButton = `<button ${!isEditable ? 'disabled' : ''} onclick="updateLotoStatus(${permit.id}, ${index}, 'Locked')" class="btn text-sm bg-blue-600 text-white px-3 py-1 rounded-md disabled:bg-slate-300">Apply Lock</button>`;
+                                break;
+                            case 'Locked':
+                                statusBadge = `<span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Locked</span>`;
+                                actionButton = `<button ${!isEditable ? 'disabled' : ''} onclick="updateLotoStatus(${permit.id}, ${index}, 'Unlocked')" class="btn text-sm bg-green-600 text-white px-3 py-1 rounded-md disabled:bg-slate-300">Remove Lock</button>`;
+                                break;
+                            case 'Unlocked':
+                                statusBadge = `<span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Unlocked</span>`;
+                                actionButton = `<span>-</span>`;
+                                break;
+                        }
+                        return `
                         <tr>
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">${a.assetName}</td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">${a.assetId}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
-                                <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Isolation Pending</span>
-                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">${statusBadge}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-center">${actionButton}</td>
                         </tr>
-                    `).join('')}
+                    `}).join('')}
                 </tbody>
             </table>
         </div>
     ` : `<div class="text-center py-12 bg-slate-50 rounded-lg border border-dashed"><p class="text-slate-500">No LOTO assets are associated with this permit.</p></div>`;
 
-    return `
+    container.innerHTML = `
         <h3 class="text-xl font-bold text-slate-800 mb-4">Lock-Out, Tag-Out (LOTO)</h3>
         ${tableHtml}
     `;
 }
 
 function renderGasTestsContent(permit) {
-    return `<div class="text-center py-12 bg-slate-50 rounded-lg border border-dashed"><p class="text-slate-500">Gas testing records will be displayed here. Feature coming soon.</p></div>`;
+    const container = getEl('gas-tests-tab');
+    const tests = MOCK_DB.gasTests[permit.id] || [];
+    const isEditable = ['Approved', 'Issued', 'Active', 'Work Stopped'].includes(permit.status);
+
+    const tableHtml = `
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-slate-200">
+                <thead class="bg-slate-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Date & Time</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">O₂ (%)</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">LEL (%)</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">H₂S (ppm)</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">CO (ppm)</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Tester</th>
+                    </tr>
+                </thead>
+                <tbody id="gas-test-rows" class="bg-white divide-y divide-slate-200">
+                    ${tests.map(t => `
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">${new Date(t.date).toLocaleString()}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500 text-right">${t.o2}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500 text-right">${t.lel}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500 text-right">${t.h2s}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500 text-right">${t.co}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">${getUser(t.tester)?.name || 'N/A'}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+                ${isEditable ? `
+                <tfoot id="add-gas-test-form">
+                    <tr class="bg-slate-50">
+                        <td class="p-4" colspan="6">
+                            <form id="gas-test-entry-form" class="grid grid-cols-5 gap-4 items-end">
+                                <input type="number" step="0.1" id="gas-o2" placeholder="O₂ %" required class="w-full rounded-md border-slate-300 text-sm">
+                                <input type="number" step="0.1" id="gas-lel" placeholder="LEL %" required class="w-full rounded-md border-slate-300 text-sm">
+                                <input type="number" id="gas-h2s" placeholder="H₂S ppm" required class="w-full rounded-md border-slate-300 text-sm">
+                                <input type="number" id="gas-co" placeholder="CO ppm" required class="w-full rounded-md border-slate-300 text-sm">
+                                <button type="submit" class="btn bg-sky-600 text-white px-4 py-2 rounded-lg font-semibold text-sm w-full">Add Reading</button>
+                            </form>
+                        </td>
+                    </tr>
+                </tfoot>
+                ` : ''}
+            </table>
+        </div>
+    `;
+
+    container.innerHTML = `
+        <h3 class="text-xl font-bold text-slate-800 mb-4">Gas Testing Log</h3>
+        ${tableHtml}
+    `;
+
+    if (isEditable) {
+        getEl('gas-test-entry-form').onsubmit = (e) => {
+            e.preventDefault();
+            addGasTest(permit.id);
+        };
+    }
 }
 
 function renderRiskAssessmentContent(permit) {
-    return `<div class="text-center py-12 bg-slate-50 rounded-lg border border-dashed"><p class="text-slate-500">Risk assessment details will be displayed here. Feature coming soon.</p></div>`;
+    const risk = MOCK_DB.riskAssessments[permit.id];
+    if (!risk) {
+        return `<div class="text-center py-12 bg-slate-50 rounded-lg border border-dashed"><p class="text-slate-500">No risk assessment has been defined for this permit.</p></div>`;
+    }
+
+    const likelihoods = ['Very Unlikely', 'Unlikely', 'Possible', 'Likely', 'Very Likely'];
+    const severities = ['Insignificant', 'Minor', 'Moderate', 'Major', 'Catastrophic'];
+    const riskColors = {
+        low: 'bg-green-500',
+        medium: 'bg-yellow-500',
+        high: 'bg-orange-500',
+        extreme: 'bg-red-500',
+    };
+    
+    let riskLevel = 'low';
+    if (risk.score >= 4 && risk.score <= 8) riskLevel = 'medium';
+    if (risk.score >= 9 && risk.score <= 15) riskLevel = 'high';
+    if (risk.score > 15) riskLevel = 'extreme';
+
+    return `
+        <h3 class="text-xl font-bold text-slate-800 mb-4">Risk Assessment</h3>
+        <div class="bg-slate-50 p-6 rounded-lg border">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+                <div class="md:col-span-2">
+                    <h4 class="font-semibold text-slate-700">Hazard Description</h4>
+                    <p class="mt-2 text-slate-600">${risk.description}</p>
+                </div>
+                <div class="text-center p-4 rounded-lg ${riskColors[riskLevel]} text-white">
+                    <p class="text-sm uppercase font-bold tracking-wider">Risk Score</p>
+                    <p class="text-5xl font-bold">${risk.score}</p>
+                    <p class="text-sm font-semibold capitalize">${riskLevel}</p>
+                </div>
+            </div>
+            <div class="mt-6 pt-6 border-t">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <h5 class="font-semibold text-slate-700">Likelihood</h5>
+                        <p class="text-slate-600">${likelihoods[risk.likelihood - 1] || 'N/A'} (Level ${risk.likelihood})</p>
+                    </div>
+                     <div>
+                        <h5 class="font-semibold text-slate-700">Severity</h5>
+                        <p class="text-slate-600">${severities[risk.severity - 1] || 'N/A'} (Level ${risk.severity})</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
 }
 
+// --- LOGIC & UPDATE FUNCTIONS ---
+
+function savePermitFields(permitId) {
+    const permit = MOCK_DB.permits.find(p => p.id === permitId);
+    const template = MOCK_DB.ewpTemplates.find(t => t.id === permit.ewpTemplateId);
+    if (!permit || !template) return;
+
+    template.fields.forEach(field => {
+        const input = getEl(`field-${field.id}`);
+        if (input) {
+            let value = input.value;
+            if (field.type === 'Boolean') {
+                value = value === 'true';
+            } else if (field.type === 'Number' || field.type === 'Decimal') {
+                value = parseFloat(value);
+            }
+            permit.data[field.id] = value;
+        }
+    });
+    
+    showToast('Permit fields saved successfully!');
+    renderPermitActions(permit); // Re-render actions in case completion status changed
+}
 
 function areChecklistsComplete(permit, type) {
     const template = MOCK_DB.ewpTemplates.find(t => t.id === permit.ewpTemplateId);
@@ -1432,6 +1633,7 @@ function areFieldsComplete(permit) {
     return template.fields.every(field => {
         if (!field.required) return true;
         const value = permit.data[field.id];
+        // **FIX**: Correctly handle boolean `false` as a valid, complete value
         return value !== undefined && value !== null && value !== '';
     });
 }
@@ -1449,8 +1651,39 @@ function updateChecklistItem(permitId, type, item, isChecked) {
     if (permit) {
         if (!permit.checklists[type]) permit.checklists[type] = {};
         permit.checklists[type][item] = isChecked;
+        showToast('Checklist updated.');
         renderPermitActions(permit); // Re-render actions as checklist completion may change button states
     }
+}
+
+function updateLotoStatus(permitId, assetIndex, newStatus) {
+    const permit = MOCK_DB.permits.find(p => p.id === permitId);
+    if (permit && permit.loto.assets[assetIndex]) {
+        permit.loto.assets[assetIndex].status = newStatus;
+        showToast(`LOTO status updated to ${newStatus}.`);
+        renderLotoContent(permit);
+    }
+}
+
+function addGasTest(permitId) {
+    const permit = MOCK_DB.permits.find(p => p.id === permitId);
+    if (!permit) return;
+
+    if (!MOCK_DB.gasTests[permitId]) {
+        MOCK_DB.gasTests[permitId] = [];
+    }
+
+    const newTest = {
+        date: new Date().toISOString(),
+        o2: getEl('gas-o2').value,
+        lel: getEl('gas-lel').value,
+        h2s: getEl('gas-h2s').value,
+        co: getEl('gas-co').value,
+        tester: AppState.currentUser.id
+    };
+    MOCK_DB.gasTests[permitId].push(newTest);
+    showToast('Gas reading added.');
+    renderGasTestsContent(permit);
 }
 
 function showAddWorkerForm(permitId) {
@@ -1530,8 +1763,8 @@ function renderTestSuite() {
             assert.notOk(areFieldsComplete(permit), 'Should be false because required fields are empty');
         });
 
-        QUnit.test('areFieldsComplete should return true if required fields are filled', function(assert) {
-            const permit = MOCK_DB.permits.find(p => p.id === 1); // Permit with data
+        QUnit.test('areFieldsComplete should return true if required fields are filled (including boolean false)', function(assert) {
+            const permit = MOCK_DB.permits.find(p => p.id === 4); // Permit with data, including a required boolean set to false
             assert.ok(areFieldsComplete(permit), 'Should be true because required fields are filled');
         });
 
