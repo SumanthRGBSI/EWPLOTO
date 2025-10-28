@@ -154,8 +154,35 @@ const MOCK_DB = {
         { id: 'sjones', name: 'Sarah Jones', roles: ['Coordinator', 'Requestor'] },
         { id: 'mross', name: 'Mike Ross', roles: ['EWP Approver', 'LOTO Reviewer'] },
         { id: 'jdoe', name: 'John Doe', roles: ['EWP Reviewer', 'Issuer'] },
-        { id: 'pchen', name: 'Patricia Chen', roles: ['Area Authority'] }
+        { id: 'pchen', name: 'Patricia Chen', roles: ['Area Authority'] },
+        { id: 'davis', name: 'David Davis', roles: ['SimOps Coordinator'] }
     ],
+    simopsConflictMatrix: {
+        'Hot Work': {
+            'Hot Work': 'Prohibited',
+            'Confined Space': 'Prohibited',
+            'Flammable Material Handling': 'Prohibited',
+            'Electrical': 'Restricted',
+            'General Work': 'Restricted'
+        },
+        'Confined Space': {
+            'Hot Work': 'Prohibited',
+            'Confined Space': 'Prohibited',
+            'Flammable Material Handling': 'Prohibited',
+            'General Work': 'Restricted'
+        },
+        'Flammable Material Handling': {
+            'Hot Work': 'Prohibited',
+            'Confined Space': 'Prohibited',
+            'Flammable Material Handling': 'Prohibited',
+            'Electrical': 'Restricted'
+        },
+        'Electrical': {
+            'Hot Work': 'Restricted',
+            'Flammable Material Handling': 'Restricted'
+        }
+    },
+    simopsConflicts: [],
     ewpTemplates: [
         {
             id: 'TPL-HW-01', name: 'Standard Hot Work', description: 'Template for welding, cutting, and grinding operations.',
@@ -331,6 +358,8 @@ function renderDashboard() {
         'Work Stopped': { text: 'text-amber-800', bg: 'bg-amber-100', border: 'border-amber-500' },
         'Draft': { text: 'text-slate-700', bg: 'bg-slate-200', border: 'border-slate-400' },
         'Pending Approval': { text: 'text-yellow-800', bg: 'bg-yellow-100', border: 'border-yellow-500' },
+        'Pending - SimOps Conflict': { text: 'text-red-800', bg: 'bg-red-100', border: 'border-red-700' },
+        'Active - SimOps Hold': { text: 'text-red-800', bg: 'bg-red-100', border: 'border-red-700' },
         'Approved': { text: 'text-indigo-800', bg: 'bg-indigo-100', border: 'border-indigo-500' },
         'Rejected': { text: 'text-red-800', bg: 'bg-red-100', border: 'border-red-500' },
         'Closed': { text: 'text-slate-800', bg: 'bg-slate-100', border: 'border-slate-300' },
@@ -909,15 +938,78 @@ function submitNewPermit(status, lotoApplicable) {
 
     MOCK_DB.permits.unshift(newPermit);
     if (status === 'Pending Approval') {
-        MOCK_DB.authorizations[newPermit.id] = [{ 
-            role: 'Requestor', 
-            userId: AppState.currentUser.id, 
+        MOCK_DB.authorizations[newPermit.id] = [{
+            role: 'Requestor',
+            userId: AppState.currentUser.id,
             date: new Date().toISOString().replace('T', ' ').substring(0, 19),
-            status: 'Approved' 
+            status: 'Approved'
         }];
+        // Trigger SimOps check
+        const hasConflict = checkForSimOpsConflicts(newPermit);
+        if (hasConflict) {
+             showModal(`<div class="p-6 text-center"><h3 class="text-lg font-semibold text-slate-900">SimOps Conflict Detected</h3><p class="mt-2 text-sm text-slate-500">A SimOps conflict was detected for permit ${newPermit.number}. It has been sent to the SimOps Coordinator for review.</p><button onclick="hideModal(); navigate('dashboard');" class="mt-4 btn bg-amber-600 text-white px-6 py-2 rounded-md">OK</button></div>`);
+             return; // Stop normal success message
+        }
     }
 
     showModal(`<div class="p-6 text-center"><h3 class="text-lg font-semibold text-slate-900">Success</h3><p class="mt-2 text-sm text-slate-500">Permit ${newPermit.number} has been successfully ${status === 'Draft' ? 'saved as a draft' : 'submitted'}.</p><button onclick="hideModal(); navigate('dashboard');" class="mt-4 btn bg-sky-600 text-white px-6 py-2 rounded-md">OK</button></div>`);
+}
+
+// --- SIMOPS CONFLICT DETECTION ---
+function checkForSimOpsConflicts(submittedPermit) {
+    let conflictFound = false;
+    const otherPermits = MOCK_DB.permits.filter(p =>
+        p.id !== submittedPermit.id &&
+        (p.status === 'Active' || p.status === 'Pending Approval' || p.status === 'Active - SimOps Hold')
+    );
+
+    const submittedStart = new Date(submittedPermit.startDate);
+    const submittedEnd = new Date(submittedPermit.endDate);
+
+    for (const otherPermit of otherPermits) {
+        // 1. Location Check
+        if (submittedPermit.loc !== otherPermit.loc) {
+            continue;
+        }
+
+        // 2. Time Overlap Check
+        const otherStart = new Date(otherPermit.startDate);
+        const otherEnd = new Date(otherPermit.endDate);
+        if (submittedStart >= otherEnd || submittedEnd <= otherStart) {
+            continue;
+        }
+
+        // 3. Matrix Logic Check
+        const type1 = submittedPermit.type;
+        const type2 = otherPermit.type;
+        const matrixRow = MOCK_DB.simopsConflictMatrix[type1];
+        const conflictSeverity = matrixRow ? matrixRow[type2] : undefined;
+
+        if (conflictSeverity === 'Prohibited' || conflictSeverity === 'Restricted') {
+            conflictFound = true;
+
+            // Create conflict record
+            const conflictId = `SIMOPS-${Date.now()}`;
+            MOCK_DB.simopsConflicts.push({
+                id: conflictId,
+                permitIds: [submittedPermit.id, otherPermit.id],
+                status: 'Unresolved',
+                severity: conflictSeverity,
+                detectedOn: new Date().toISOString(),
+                resolution: null,
+                justification: null,
+                resolvedBy: null
+            });
+
+            // Update permit statuses
+            submittedPermit.status = 'Pending - SimOps Conflict';
+            if (otherPermit.status === 'Active') {
+                otherPermit.status = 'Active - SimOps Hold';
+            }
+        }
+    }
+
+    return conflictFound;
 }
 
 
@@ -934,7 +1026,7 @@ function renderPermitDetails(permitId) {
     view.innerHTML = `
         <div id="permit-details-card" class="bg-white rounded-xl shadow-lg border border-slate-200/80">
             <!-- Permit Header -->
-            <div class="p-6 border-b border-slate-200">
+            <div id="permit-header-container" class="p-6 border-b border-slate-200">
                 <div class="flex flex-col sm:flex-row justify-between items-start gap-4">
                     <div class="flex-grow">
                          <button onclick="navigate('dashboard')" class="flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-slate-800 mb-4 transition-colors">
@@ -965,6 +1057,7 @@ function renderPermitDetails(permitId) {
                 <div id="loto-tab" class="tab-content"></div>
                 <div id="gas-tests-tab" class="tab-content"></div>
                 <div id="risk-assessment-tab" class="tab-content"></div>
+                <div id="simops-resolution-tab" class="tab-content"></div>
             </div>
         </div>
     `;
@@ -973,6 +1066,48 @@ function renderPermitDetails(permitId) {
     renderStatusStepper(permit);
     renderTabs(permit);
     renderTabContent(permit);
+    renderSimOpsBanner(permit);
+}
+
+function renderSimOpsBanner(permit) {
+    const conflict = MOCK_DB.simopsConflicts.find(c => c.permitIds.includes(permit.id));
+    if (!conflict) return;
+
+    const otherPermitId = conflict.permitIds.find(id => id !== permit.id);
+    const otherPermit = MOCK_DB.permits.find(p => p.id === otherPermitId);
+
+    let bannerClass, title, message, icon;
+
+    if (conflict.status === 'Resolved') {
+        bannerClass = 'bg-green-100 border-green-500 text-green-700';
+        title = `FYI: SimOps Conflict Resolved`;
+        message = `This permit was part of a SimOps review with <strong>${otherPermit.number}</strong>. The conflict has been resolved. Please review any new controls before approval.`;
+        icon = `<svg class="h-5 w-5 text-green-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd" /></svg>`;
+    } else {
+        bannerClass = 'bg-red-100 border-red-500 text-red-700';
+        title = `STOP: SimOps Conflict Detected`;
+        message = `This permit has an unresolved SimOps conflict with permit <strong>${otherPermit.number}</strong>. The approval process is on hold until the conflict is resolved by a SimOps Coordinator.`;
+        icon = `<svg class="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd" /></svg>`;
+    }
+
+
+    const bannerHtml = `
+        <div class="p-4 rounded-md border-l-4 ${bannerClass} mb-6">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    ${icon}
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-sm font-bold">${title}</h3>
+                    <div class="mt-2 text-sm">
+                        <p>${message}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    getEl('permit-header-container').insertAdjacentHTML('afterbegin', bannerHtml);
 }
 
 // Helper to get user details
@@ -986,8 +1121,11 @@ function renderPermitActions(permit) {
     const isPreWorkComplete = areChecklistsComplete(permit, 'pre') && areFieldsComplete(permit);
     const isPostWorkComplete = areChecklistsComplete(permit, 'post');
     const isIssuer = currentUser.roles.includes('Issuer');
+    const hasConflict = MOCK_DB.simopsConflicts.some(c => c.permitIds.includes(permit.id) && c.status === 'Unresolved');
 
-    if (permit.status === 'Approved' && isIssuer) {
+    if (hasConflict) {
+        buttons += `<button class="btn bg-slate-400 text-white px-4 py-2 rounded-md font-medium text-sm cursor-not-allowed" disabled title="Approval blocked by SimOps conflict">Approve</button>`;
+    } else if (permit.status === 'Approved' && isIssuer) {
         if (!isPreWorkComplete) {
             buttons += `<div class="text-xs text-amber-600 bg-amber-100 p-2 rounded-md">Pre-work checklists & fields must be completed to issue.</div>`;
         } else {
@@ -1070,9 +1208,21 @@ function renderTabs(permit) {
         availableTabs.push('gas-tests');
     }
 
+    const hasConflict = MOCK_DB.simopsConflicts.some(c => c.permitIds.includes(permit.id));
+    if (hasConflict) {
+        availableTabs.push('simops-resolution');
+    }
+
     nav.innerHTML = availableTabs.map(tabId => {
         const name = tabId.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-        return `<a href="#" onclick="event.preventDefault(); switchTab('${tabId}')" class="tab-btn whitespace-nowrap py-3 px-2 rounded-t-lg border-b-2 font-semibold text-sm ${AppState.activeTab === tabId ? 'active' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'}">${name}</a>`;
+        let tabClass = 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300';
+        if (AppState.activeTab === tabId) {
+            tabClass = 'active';
+        }
+        if (tabId === 'simops-resolution') {
+             tabClass += ' text-red-600 font-bold';
+        }
+        return `<a href="#" onclick="event.preventDefault(); switchTab('${tabId}')" class="tab-btn whitespace-nowrap py-3 px-2 rounded-t-lg border-b-2 font-semibold text-sm ${tabClass}">${name}</a>`;
     }).join('');
 }
 
@@ -1084,7 +1234,7 @@ function switchTab(tabName) {
 }
 
 function renderTabContent(permit) {
-    ['basic-details-tab', 'permit-fields-tab', 'worker-details-tab', 'authorization-tab', 'checklists-tab', 'loto-tab', 'gas-tests-tab', 'risk-assessment-tab'].forEach(id => {
+    ['basic-details-tab', 'permit-fields-tab', 'worker-details-tab', 'authorization-tab', 'checklists-tab', 'loto-tab', 'gas-tests-tab', 'risk-assessment-tab', 'simops-resolution-tab'].forEach(id => {
         const el = getEl(id);
         if (el) el.classList.remove('active');
     });
@@ -1101,9 +1251,156 @@ function renderTabContent(permit) {
         case 'loto': if (permit.loto.required) { renderLotoContent(permit); } break;
         case 'gas-tests': renderGasTestsContent(permit); break;
         case 'risk-assessment': activeContentEl.innerHTML = renderRiskAssessmentContent(permit); break;
+        case 'simops-resolution': renderSimOpsResolutionContent(permit); break;
     }
     activeContentEl.classList.add('active');
 }
+
+function renderSimOpsResolutionContent(permit) {
+    const container = getEl('simops-resolution-tab');
+    const conflict = MOCK_DB.simopsConflicts.find(c => c.permitIds.includes(permit.id));
+    if (!conflict) {
+        container.innerHTML = `<p>No conflict data found.</p>`;
+        return;
+    }
+
+    const otherPermitId = conflict.permitIds.find(id => id !== permit.id);
+    const otherPermit = MOCK_DB.permits.find(p => p.id === otherPermitId);
+    const isCoordinator = AppState.currentUser.roles.includes('SimOps Coordinator');
+    const isResolved = conflict.status === 'Resolved';
+
+    const permitCard = (p) => `
+        <div class="bg-white p-4 rounded-lg shadow-md border">
+            <h4 class="font-bold text-lg text-slate-900">${p.number}</h4>
+            <p class="text-sm font-semibold text-slate-700">${p.name}</p>
+            <p class="text-sm mt-2"><strong class="text-slate-600">Work Type:</strong> ${p.type}</p>
+            <p class="text-sm"><strong class="text-slate-600">Location:</strong> ${p.loc}</p>
+            <p class="text-sm"><strong class="text-slate-600">Time:</strong> ${new Date(p.startDate).toLocaleString()} to ${new Date(p.endDate).toLocaleString()}</p>
+        </div>
+    `;
+
+    let resolutionForm = '';
+    if (isCoordinator && !isResolved) {
+        resolutionForm = `
+            <div class="mt-6">
+                <h4 class="text-lg font-semibold text-slate-800">Resolution Actions</h4>
+                <div class="space-y-2 mt-2">
+                    <div>
+                        <input type="radio" id="res-controls" name="resolution-type" value="controls" class="mr-2">
+                        <label for="res-controls">Add Mitigating Controls</label>
+                        <textarea id="mitigating-controls-text" placeholder="Describe mandatory controls..." class="hidden mt-1 w-full rounded-md border-slate-300 text-sm"></textarea>
+                    </div>
+                    <div>
+                        <input type="radio" id="res-schedule" name="resolution-type" value="schedule" class="mr-2">
+                        <label for="res-schedule">Deconflict Schedule</label>
+                        <div id="deconflict-schedule-inputs" class="hidden mt-1 space-y-2">
+                            <p class="text-xs text-slate-600">Modify the start time of <strong>${permit.number}</strong> to resolve the conflict.</p>
+                            <input type="datetime-local" id="new-start-date" class="w-full rounded-md border-slate-300 text-sm">
+                        </div>
+                    </div>
+                     <div>
+                        <input type="radio" id="res-reject" name="resolution-type" value="reject" class="mr-2">
+                        <label for="res-reject">Reject Submitted Permit (${permit.number})</label>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <label for="resolution-justification" class="block text-sm font-medium text-slate-700">Resolution Justification *</label>
+                    <textarea id="resolution-justification" rows="3" required class="mt-1 w-full rounded-md border-slate-300"></textarea>
+                </div>
+                <div class="mt-4 flex justify-end">
+                    <button onclick="resolveConflict('${conflict.id}')" class="btn bg-sky-600 text-white px-6 py-2 rounded-md font-semibold text-sm">Mark as Resolved</button>
+                </div>
+            </div>
+        `;
+    } else if (isResolved) {
+        const resolver = getUser(conflict.resolvedBy);
+        resolutionForm = `
+             <div class="mt-6 p-4 bg-green-50 rounded-lg border border-green-200">
+                <h4 class="text-lg font-semibold text-green-800">Conflict Resolved</h4>
+                <p class="text-sm mt-2"><strong class="text-slate-600">Resolution:</strong> ${conflict.resolution}</p>
+                <p class="text-sm mt-1"><strong class="text-slate-600">Justification:</strong> ${conflict.justification}</p>
+                <p class="text-sm mt-1"><strong class="text-slate-600">Resolved By:</strong> ${resolver?.name || 'N/A'}</p>
+             </div>
+        `;
+    }
+
+    container.innerHTML = `
+        <div>
+            <h3 class="text-xl font-bold text-red-700">SimOps Conflict Details</h3>
+            <p class="text-sm text-slate-600 mt-1">Severity: <span class="font-bold">${conflict.severity}</span></p>
+        </div>
+        <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+            ${permitCard(permit)}
+            ${permitCard(otherPermit)}
+        </div>
+        ${resolutionForm}
+    `;
+
+    // Add event listener for radio buttons
+    document.querySelectorAll('input[name="resolution-type"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            const controlsText = getEl('mitigating-controls-text');
+            const scheduleInputs = getEl('deconflict-schedule-inputs');
+            controlsText.classList.add('hidden');
+            scheduleInputs.classList.add('hidden');
+
+            if (e.target.value === 'controls') {
+                controlsText.classList.remove('hidden');
+            } else if (e.target.value === 'schedule') {
+                scheduleInputs.classList.remove('hidden');
+            }
+        });
+    });
+}
+
+function resolveConflict(conflictId) {
+    const conflict = MOCK_DB.simopsConflicts.find(c => c.id === conflictId);
+    const justification = getEl('resolution-justification').value.trim();
+    if (!justification) {
+        alert('Justification is required.');
+        return;
+    }
+
+    const resolutionType = document.querySelector('input[name="resolution-type"]:checked')?.value;
+    if (!resolutionType) {
+        alert('Please select a resolution action.');
+        return;
+    }
+
+    conflict.status = 'Resolved';
+    conflict.justification = justification;
+    conflict.resolvedBy = AppState.currentUser.id;
+
+    if (resolutionType === 'controls') {
+        const controls = getEl('mitigating-controls-text').value.trim();
+        conflict.resolution = `Added Mitigating Controls: ${controls}`;
+        // In a real app, you'd append these controls to the permits
+    } else if (resolutionType === 'schedule') {
+        const newStartDate = getEl('new-start-date').value;
+        if (!newStartDate) {
+            alert('Please select a new start date to deconflict the schedule.');
+            return;
+        }
+        const permitToChange = MOCK_DB.permits.find(p => p.id === conflict.permitIds[0]);
+        permitToChange.startDate = newStartDate;
+        conflict.resolution = `Deconflicted schedule. Permit ${permitToChange.number} start time changed to ${newStartDate}.`;
+    } else if (resolutionType === 'reject') {
+        conflict.resolution = `Rejected the newer permit.`;
+        const newPermit = MOCK_DB.permits.find(p => p.id === conflict.permitIds[0]);
+        newPermit.status = 'Rejected';
+    }
+
+    // Unblock permits
+    conflict.permitIds.forEach(pid => {
+        const p = MOCK_DB.permits.find(id => id.id === pid);
+        if (p.status === 'Pending - SimOps Conflict') p.status = 'Pending Approval';
+        if (p.status === 'Active - SimOps Hold') p.status = 'Active';
+    });
+
+    showToast('Conflict resolved successfully.');
+    renderPermitDetails(AppState.activePermitId);
+}
+
 
 // --- TAB CONTENT RENDERING ---
 function renderBasicDetailsContent(permit) {
@@ -1776,6 +2073,60 @@ function renderTestSuite() {
         QUnit.test('areChecklistsComplete should return true if post-work checklist is complete', function(assert) {
             const permit = MOCK_DB.permits.find(p => p.id === 5); // Permit with complete post-work checklist
             assert.ok(areChecklistsComplete(permit, 'post'), 'Should be true for complete post-work checklist');
+        });
+    });
+
+    QUnit.module('SimOps Conflict Logic', function(hooks) {
+        hooks.beforeEach(function() {
+            // Reset conflicts before each test
+            MOCK_DB.simopsConflicts = [];
+            // Restore original permit statuses
+            MOCK_DB.permits.find(p => p.id === 1).status = 'Pending Approval';
+            MOCK_DB.permits.find(p => p.id === 4).status = 'Active';
+        });
+
+        QUnit.test('should detect a direct conflict (Hot Work vs Hot Work)', function(assert) {
+            const newPermit = {
+                id: 6, number: 'PTW-2025-006', name: 'New Welding Job', loc: 'Area 5 - Processing Unit',
+                status: 'Pending Approval', type: 'Hot Work', startDate: '2025-08-06T10:00', endDate: '2025-08-06T12:00'
+            };
+            const hasConflict = checkForSimOpsConflicts(newPermit);
+            assert.ok(hasConflict, 'Conflict should be detected');
+            assert.equal(MOCK_DB.simopsConflicts.length, 1, 'One conflict record should be created');
+            assert.equal(newPermit.status, 'Pending - SimOps Conflict', 'New permit status should be updated');
+        });
+
+        QUnit.test('should not detect a conflict if locations are different', function(assert) {
+            const newPermit = {
+                id: 6, number: 'PTW-2025-006', name: 'New Welding Job', loc: 'Area 1 - Main Hall',
+                status: 'Pending Approval', type: 'Hot Work', startDate: '2025-08-06T10:00', endDate: '2025-08-06T12:00'
+            };
+            const hasConflict = checkForSimOpsConflicts(newPermit);
+            assert.notOk(hasConflict, 'Conflict should not be detected for different locations');
+        });
+
+        QUnit.test('should not detect a conflict if times do not overlap', function(assert) {
+            const newPermit = {
+                id: 6, number: 'PTW-2025-006', name: 'New Welding Job', loc: 'Area 5 - Processing Unit',
+                status: 'Pending Approval', type: 'Hot Work', startDate: '2025-08-07T10:00', endDate: '2025-08-07T12:00'
+            };
+            const hasConflict = checkForSimOpsConflicts(newPermit);
+            assert.notOk(hasConflict, 'Conflict should not be detected for non-overlapping times');
+        });
+
+        QUnit.test('should put an Active permit on SimOps Hold if a conflict arises', function(assert) {
+            const activePermit = MOCK_DB.permits.find(p => p.id === 4); // Active permit in Pump House 1
+            const newPermit = {
+                id: 6, number: 'PTW-2025-006', name: 'Grinding near Pump P-502', loc: 'Pump House 1',
+                status: 'Pending Approval', type: 'Hot Work', startDate: '2025-08-05T11:00', endDate: '2025-08-05T13:00'
+            };
+             // Mock matrix entry for Mechanical vs Hot Work if it doesn't exist
+            if (!MOCK_DB.simopsConflictMatrix['Hot Work']['Mechanical']) {
+                MOCK_DB.simopsConflictMatrix['Hot Work']['Mechanical'] = 'Prohibited';
+            }
+            const hasConflict = checkForSimOpsConflicts(newPermit);
+            assert.ok(hasConflict, 'Conflict should be detected with an active permit');
+            assert.equal(activePermit.status, 'Active - SimOps Hold', 'Active permit should be put on hold');
         });
     });
 }
