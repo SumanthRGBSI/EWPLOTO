@@ -182,7 +182,18 @@ const MOCK_DB = {
             'Flammable Material Handling': 'Restricted'
         }
     },
-    simopsConflicts: [],
+    simopsConflicts: [
+        {
+            id: 'SIMOPS-DEMO-01',
+            permitIds: [1, 6],
+            status: 'Unresolved',
+            severity: 'Prohibited',
+            detectedOn: '2025-08-06T09:05:00Z',
+            resolution: null,
+            justification: null,
+            resolvedBy: null
+        }
+    ],
     ewpTemplates: [
         {
             id: 'TPL-HW-01', name: 'Standard Hot Work', description: 'Template for welding, cutting, and grinding operations.',
@@ -226,7 +237,8 @@ const MOCK_DB = {
         }
     ],
     permits: [
-        { id: 1, number: 'PTW-2025-001', name: 'Weld support bracket on Pipe Rack R-11', loc: 'Area 5 - Processing Unit', status: 'Pending Approval', type: 'Hot Work', loto: { required: false, assets: [] }, contractor: 'WeldPro Inc.', coordinatorId: 'sjones', ewpTemplateId: 'TPL-HW-01', approvalTemplateId: 'APP-STD-01', startDate: '2025-08-06T09:00', endDate: '2025-08-06T17:00', data: {f1: true, f2: 0.5, f3: 'CO2'}, checklists: { pre: { 'Confirm fire extinguisher is present and inspected.': true, 'Verify combustible materials are removed.': true, 'Test gas detector.': false }, post: {} } },
+        { id: 1, number: 'PTW-2025-001', name: 'Weld support bracket on Pipe Rack R-11', loc: 'Area 5 - Processing Unit', status: 'Pending - SimOps Conflict', type: 'Hot Work', loto: { required: false, assets: [] }, contractor: 'WeldPro Inc.', coordinatorId: 'sjones', ewpTemplateId: 'TPL-HW-01', approvalTemplateId: 'APP-STD-01', startDate: '2025-08-06T09:00', endDate: '2025-08-06T17:00', data: {f1: true, f2: 0.5, f3: 'CO2'}, checklists: { pre: { 'Confirm fire extinguisher is present and inspected.': true, 'Verify combustible materials are removed.': true, 'Test gas detector.': false }, post: {} } },
+        { id: 6, number: 'PTW-2025-006', name: 'Confined Space Entry near Pipe Rack R-11', loc: 'Area 5 - Processing Unit', status: 'Pending - SimOps Conflict', type: 'Confined Space', loto: { required: false, assets: [] }, contractor: 'SafeSpace LLC', coordinatorId: 'sjones', ewpTemplateId: 'TPL-CSE-01', approvalTemplateId: 'APP-STD-01', startDate: '2025-08-06T10:00', endDate: '2025-08-06T18:00', data: {f4: true, f5: 'Atmosphere checked', f6: '2025-08-06T10:00'}, checklists: { pre: {}, post: {} } },
         { id: 2, number: 'PTW-2025-002', name: 'Confined Space Entry - Tank T-101', loc: 'Area 2', status: 'Issued', type: 'Confined Space', loto: { required: true, assets: [{procedure: 'PROC-001', assetName: 'Breaker PNL-B-03', assetId: 'EQ-1023', status: 'Locked'}] }, contractor: 'SafeSpace LLC', coordinatorId: 'sjones', ewpTemplateId: 'TPL-CSE-01', approvalTemplateId: 'APP-LOTO-01', startDate: '2025-08-07T08:30', endDate: '2025-08-07T12:30', data: {f4: true, f5: 'O2: 20.9%, LEL: 0%', f6: '2025-08-07T08:00'}, checklists: { pre: { 'Verify air monitoring is calibrated.': true, 'Confirm rescue team is on standby.': true, 'Isolate all energy sources (LOTO).': true }, post: {} } },
         { id: 3, number: 'PTW-2025-003', name: 'Routine HVAC Maintenance', loc: 'Building A Rooftop', status: 'Draft', type: 'General Work', loto: { required: false, assets: [] }, contractor: 'CoolAir Services', coordinatorId: 'sjones', ewpTemplateId: 'TPL-HW-01', approvalTemplateId: 'APP-STD-01', startDate: '2025-08-08T09:00', endDate: '2025-08-08T13:00', data: {}, checklists: { pre: {}, post: {} } },
         { id: 4, number: 'PTW-2025-004', name: 'Pump P-502 Motor Replacement', loc: 'Pump House 1', status: 'Active', type: 'Mechanical', loto: { required: true, assets: [{procedure: 'PROC-002', assetName: 'Breaker PNL-B-03', assetId: 'EQ-1023', status: 'Locked'}, {procedure: 'PROC-003', assetName: 'Inlet Valve V-502', assetId: 'V-502', status: 'Locked'}] }, contractor: 'MechServe', coordinatorId: 'sjones', ewpTemplateId: 'TPL-HW-01', approvalTemplateId: 'APP-LOTO-01', startDate: '2025-08-05T10:00', endDate: '2025-08-05T18:00', data: {f1: false, f2: 0.0, f3: 'Dry Powder'}, checklists: { pre: { 'Confirm fire extinguisher is present and inspected.': true, 'Verify combustible materials are removed.': true, 'Test gas detector.': true }, post: {} } },
