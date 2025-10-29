@@ -284,25 +284,23 @@ const MOCK_DB = {
         'Hot Work': {
             'Hot Work': 'Prohibited',
             'Confined Space': 'Prohibited',
-            'Flammable Material Handling': 'Prohibited',
-            'Electrical': 'Restricted',
-            'General Work': 'Restricted'
+            'Flammable Material': 'Prohibited',
+            'Electrical': 'Restricted'
         },
         'Confined Space': {
             'Hot Work': 'Prohibited',
             'Confined Space': 'Prohibited',
-            'Flammable Material Handling': 'Prohibited',
-            'General Work': 'Restricted'
+            'Flammable Material': 'Prohibited'
         },
-        'Flammable Material Handling': {
+        'Flammable Material': {
             'Hot Work': 'Prohibited',
             'Confined Space': 'Prohibited',
-            'Flammable Material Handling': 'Prohibited',
+            'Flammable Material': 'Prohibited',
             'Electrical': 'Restricted'
         },
         'Electrical': {
             'Hot Work': 'Restricted',
-            'Flammable Material Handling': 'Restricted'
+            'Flammable Material': 'Restricted'
         }
     },
     simopsConflicts: [
@@ -2492,6 +2490,20 @@ function runTests() {
             const hasConflict = checkForSimOpsConflicts(newPermit);
             assert.ok(hasConflict, 'Conflict should be detected with an active permit');
             assert.equal(activePermit.status, 'Active - SimOps Hold', 'Active permit should be put on hold');
+        });
+
+        QUnit.test('should correctly identify "Restricted" conflicts from the updated matrix', function(assert) {
+            const electricalPermit = {
+                id: 7, number: 'PTW-2025-007', name: 'Electrical Work', loc: 'Area 5 - Processing Unit',
+                status: 'Pending Approval', type: 'Electrical', startDate: '2025-08-06T10:00', endDate: '2025-08-06T12:00'
+            };
+            const hotWorkPermit = MOCK_DB.permits.find(p => p.id === 1);
+            hotWorkPermit.status = 'Pending Approval'; // Ensure it's in a checkable state
+
+            const hasConflict = checkForSimOpsConflicts(electricalPermit);
+            assert.ok(hasConflict, 'A "Restricted" conflict should be detected between Electrical and Hot Work');
+            assert.equal(MOCK_DB.simopsConflicts.length, 1, 'One conflict record should be created');
+            assert.equal(MOCK_DB.simopsConflicts[0].severity, 'Restricted', 'The conflict severity should be "Restricted"');
         });
     });
 }
