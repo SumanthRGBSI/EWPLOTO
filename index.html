@@ -280,29 +280,6 @@ const MOCK_DB = {
         { id: 'pchen', name: 'Patricia Chen', roles: ['Area Authority'] },
         { id: 'davis', name: 'David Davis', roles: ['SimOps Coordinator'] }
     ],
-    simopsConflictMatrix: {
-        'Hot Work': {
-            'Hot Work': 'Prohibited',
-            'Confined Space': 'Prohibited',
-            'Flammable Material': 'Prohibited',
-            'Electrical': 'Restricted'
-        },
-        'Confined Space': {
-            'Hot Work': 'Prohibited',
-            'Confined Space': 'Prohibited',
-            'Flammable Material': 'Prohibited'
-        },
-        'Flammable Material': {
-            'Hot Work': 'Prohibited',
-            'Confined Space': 'Prohibited',
-            'Flammable Material': 'Prohibited',
-            'Electrical': 'Restricted'
-        },
-        'Electrical': {
-            'Hot Work': 'Restricted',
-            'Flammable Material': 'Restricted'
-        }
-    },
     simopsConflicts: [
         {
             id: 'SIMOPS-DEMO-01',
@@ -355,6 +332,35 @@ const MOCK_DB = {
                 { name: 'Area Authority', suggestedUsers: ['pchen'] },
                 { name: 'Issuer', suggestedUsers: ['jdoe'] }
             ]
+        }
+    ],
+    simopsMatrixTemplates: [
+        {
+            id: 'SIMOPS-TPL-01',
+            name: 'Default SIMOPS Matrix',
+            matrix: {
+                'Hot Work': {
+                    'Hot Work': 'Prohibited',
+                    'Confined Space': 'Prohibited',
+                    'Flammable Material': 'Prohibited',
+                    'Electrical': 'Restricted'
+                },
+                'Confined Space': {
+                    'Hot Work': 'Prohibited',
+                    'Confined Space': 'Prohibited',
+                    'Flammable Material': 'Prohibited'
+                },
+                'Flammable Material': {
+                    'Hot Work': 'Prohibited',
+                    'Confined Space': 'Prohibited',
+                    'Flammable Material': 'Prohibited',
+                    'Electrical': 'Restricted'
+                },
+                'Electrical': {
+                    'Hot Work': 'Restricted',
+                    'Flammable Material': 'Restricted'
+                }
+            }
         }
     ],
     permits: [
@@ -724,10 +730,12 @@ function renderTemplates() {
                 </div>
                 <div id="approval-templates-list" class="space-y-4"></div>
             </div>
+            <div id="simops-matrix-container" class="lg:col-span-2"></div>
         </div>
     `;
     renderEwpTemplatesList();
     renderApprovalTemplatesList();
+    renderSimopsMatrixView();
     attachTemplateViewListeners();
 }
 
@@ -740,6 +748,118 @@ function attachTemplateViewListeners() {
         const action = button.dataset.action;
         if (action === 'new-ewp-template') renderEwpTemplateForm();
         if (action === 'new-approval-template') renderApprovalTemplateForm();
+        if (action === 'edit-simops-matrix') renderSimopsTemplateForm(button.dataset.id);
+    };
+}
+
+function renderSimopsMatrixView() {
+    const container = getEl('simops-matrix-container');
+    const template = MOCK_DB.simopsMatrixTemplates[0]; // Assuming one for now
+    if (!template) {
+        container.innerHTML = '<h2>SIMOPS Matrix Template Not Found</h2>';
+        return;
+    }
+
+    const workTypes = Object.keys(template.matrix);
+    const severities = {
+        'Prohibited': 'bg-red-200 text-red-800',
+        'Restricted': 'bg-yellow-200 text-yellow-800',
+        '-': 'bg-gray-200 text-gray-800'
+    };
+
+    container.innerHTML = `
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-bold text-slate-800">${template.name}</h3>
+            <button data-action="edit-simops-matrix" data-id="${template.id}" class="btn bg-sky-600 text-white px-4 py-2 rounded-lg font-semibold text-sm flex items-center gap-2 shadow-sm hover:bg-sky-700">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg>
+                Edit Matrix
+            </button>
+        </div>
+        <div class="bg-white p-4 rounded-lg shadow-md border border-slate-200 overflow-x-auto">
+            <table class="min-w-full text-sm text-center">
+                <thead class="bg-slate-100">
+                    <tr>
+                        <th class="p-2 border font-semibold">Work Type</th>
+                        ${workTypes.map(wt => `<th class="p-2 border font-semibold">${wt}</th>`).join('')}
+                    </tr>
+                </thead>
+                <tbody>
+                    ${workTypes.map(rowType => `
+                        <tr>
+                            <td class="p-2 border font-semibold bg-slate-100">${rowType}</td>
+                            ${workTypes.map(colType => {
+                                const severity = template.matrix[rowType]?.[colType] || '-';
+                                return `<td class="p-2 border ${severities[severity] || severities['-']}">${severity}</td>`;
+                            }).join('')}
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+function renderSimopsTemplateForm(templateId) {
+    const template = MOCK_DB.simopsMatrixTemplates.find(t => t.id === templateId);
+    if (!template) return;
+
+    // Deep copy for editing
+    let tempMatrix = JSON.parse(JSON.stringify(template.matrix));
+    const workTypes = Object.keys(tempMatrix);
+    const severityOptions = ['-', 'Restricted', 'Prohibited'];
+
+    const formHtml = `
+        <form id="simops-template-form" class="p-8 space-y-6 max-h-[90vh] overflow-y-auto">
+            <h2 class="text-xl font-bold text-slate-900">Edit SIMOPS Matrix</h2>
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-sm text-center">
+                    <thead class="bg-slate-100">
+                        <tr>
+                            <th class="p-2 border font-semibold">Work Type</th>
+                            ${workTypes.map(wt => `<th class="p-2 border font-semibold">${wt}</th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${workTypes.map(rowType => `
+                            <tr>
+                                <td class="p-2 border font-semibold bg-slate-100">${rowType}</td>
+                                ${workTypes.map(colType => {
+                                    const severity = tempMatrix[rowType]?.[colType] || '-';
+                                    return `
+                                        <td class="p-1 border">
+                                            <select data-row="${rowType}" data-col="${colType}" class="w-full rounded-md border-slate-300 shadow-sm text-xs p-1">
+                                                ${severityOptions.map(opt => `<option value="${opt}" ${severity === opt ? 'selected' : ''}>${opt}</option>`).join('')}
+                                            </select>
+                                        </td>
+                                    `;
+                                }).join('')}
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+             <footer class="flex justify-end gap-4 pt-6 border-t">
+                <button type="button" onclick="hideModal()" class="btn bg-white border border-slate-300 text-slate-700 px-6 py-2 rounded-md font-medium text-sm">Cancel</button>
+                <button type="submit" class="btn bg-sky-600 text-white px-8 py-2 rounded-md font-semibold text-sm">Save Matrix</button>
+            </footer>
+        </form>
+    `;
+    showModal(formHtml);
+
+    const form = getEl('simops-template-form');
+    form.addEventListener('change', (e) => {
+        if (e.target.tagName === 'SELECT') {
+            const { row, col } = e.target.dataset;
+            tempMatrix[row][col] = e.target.value;
+        }
+    });
+
+    form.onsubmit = (e) => {
+        e.preventDefault();
+        template.matrix = tempMatrix;
+        hideModal();
+        renderSimopsMatrixView();
+        showToast('SIMOPS Matrix updated successfully!', 'success');
     };
 }
 
@@ -1301,7 +1421,12 @@ function checkForSimOpsConflicts(submittedPermit) {
         // 3. Matrix Logic Check
         const type1 = submittedPermit.type;
         const type2 = otherPermit.type;
-        const matrixRow = MOCK_DB.simopsConflictMatrix[type1];
+
+        // **FIX**: Use the matrix from the template
+        const simopsTemplate = MOCK_DB.simopsMatrixTemplates[0]; // Assuming one for now
+        if (!simopsTemplate) continue;
+
+        const matrixRow = simopsTemplate.matrix[type1];
         const conflictSeverity = matrixRow ? matrixRow[type2] : undefined;
 
         if (conflictSeverity === 'Prohibited' || conflictSeverity === 'Restricted') {
@@ -2483,10 +2608,8 @@ function runTests() {
                 id: 6, number: 'PTW-2025-006', name: 'Grinding near Pump P-502', loc: 'Pump House 1',
                 status: 'Pending Approval', type: 'Hot Work', startDate: '2025-08-05T11:00', endDate: '2025-08-05T13:00'
             };
-             // Mock matrix entry for Mechanical vs Hot Work if it doesn't exist
-            if (!MOCK_DB.simopsConflictMatrix['Hot Work']['Mechanical']) {
-                MOCK_DB.simopsConflictMatrix['Hot Work']['Mechanical'] = 'Prohibited';
-            }
+             MOCK_DB.simopsMatrixTemplates[0].matrix['Mechanical'] = { 'Hot Work': 'Prohibited' };
+             MOCK_DB.simopsMatrixTemplates[0].matrix['Hot Work']['Mechanical'] = 'Prohibited';
             const hasConflict = checkForSimOpsConflicts(newPermit);
             assert.ok(hasConflict, 'Conflict should be detected with an active permit');
             assert.equal(activePermit.status, 'Active - SimOps Hold', 'Active permit should be put on hold');
